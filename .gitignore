@@ -1,0 +1,22 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
+
+# Django
+*.log
+/staticfiles/
+/media/
+
+# Node / React / Vite
+node_modules/
+dist/
+.env
+.vscode/
+
+# MacOS / Linux trash
+.DS_Store
+*.swp
