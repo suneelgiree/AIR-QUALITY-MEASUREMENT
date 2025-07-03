@@ -1,0 +1,20 @@
+[
+  {
+    "timestamp": "2025-07-03T21:37:26.896938",
+    "sensor": "BME280",
+    "temperature": 21.08,
+    "humidity": 53.62,
+    "pressure": 1010.51,
+    "dew_point": 11.81,
+    "heat_index": 21.08,
+    "altitude": 22.8,
+    "units": {
+      "temperature": "\u00b0C",
+      "humidity": "%",
+      "pressure": "hPa",
+      "dew_point": "\u00b0C",
+      "heat_index": "\u00b0C",
+      "altitude": "m"
+    }
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "timestamp": "2025-07-03T21:37:01.529793",
+    "sensor": "PMS7003",
+    "pm1_0_standard": 16.8,
+    "pm2_5_standard": 21.4,
+    "pm10_standard": 25.2,
+    "pm1_0_environmental": 19.7,
+    "pm2_5_environmental": 27.5,
+    "pm10_environmental": 29.5,
+    "particles_0_3um": 953,
+    "particles_0_5um": 616,
+    "particles_1_0um": 260,
+    "particles_2_5um": 98,
+    "particles_5_0um": 29,
+    "particles_10um": 21,
+    "unit_pm": "\u03bcg/m\u00b3",
+    "unit_particles": "particles/0.1L"
+  }
+]

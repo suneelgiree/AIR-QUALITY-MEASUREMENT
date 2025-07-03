@@ -1,0 +1,27 @@
+[
+  {
+    "timestamp": "2025-07-03T21:37:43.335352",
+    "overall_aqi": 71,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 21.4,
+    "individual_aqis": {
+      "PM2.5": 71,
+      "PM10": 23
+    },
+    "concentrations": {
+      "PM2.5": 21.4,
+      "PM10": 25.2
+    },
+    "category_info": {
+      "category": "Moderate",
+      "color": "Yellow",
+      "description": "Air quality is acceptable for most people",
+      "range": "51-100"
+    },
+    "environmental_data": {
+      "temperature": 21.08,
+      "humidity": 53.62,
+      "pressure": 1010.51
+    }
+  }
+]
