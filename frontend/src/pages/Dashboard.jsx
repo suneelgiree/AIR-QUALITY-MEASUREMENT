@@ -75,7 +75,7 @@ const Dashboard = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('userInfo');
-    navigate('/login');
+    navigate('/');
   };
 
   const accountName = userInfo?.full_name || "User";
