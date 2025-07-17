@@ -64,6 +64,8 @@ The system follows a modern three-tier architecture:
 - AQI monitoring interface
 - Weather and AQI forecasting
 - User authentication and profile management
+- Multilingual support (English , Nepali and Hindi) using react-i18next
+- Landing page with Navbar, Home, Services, About Us, and Footer
 
 ### Backend (Django)
 - RESTful API endpoints
