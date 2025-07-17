@@ -107,15 +107,15 @@ const LandingPage = () => {
       <a href="/" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
         Home
       </a>
-      <a href="/aqi" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
+{/*       <a href="/aqi" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
         AQI
-      </a>
+      </a> */}
       <a href="#services" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
         Our Services
       </a>
-      <a href="/forecasting" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
+{/*       <a href="/forecasting" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
         Forecasting
-      </a>
+      </a> */}
       <a href="#aboutus" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
         About Us
       </a>
