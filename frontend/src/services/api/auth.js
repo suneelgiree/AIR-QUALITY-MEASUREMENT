@@ -1,4 +1,4 @@
-import apiClient from './index';
+import apiClient from './axios';
 
 const authService = {
   register: (userData) => 

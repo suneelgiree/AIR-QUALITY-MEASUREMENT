@@ -1,9 +1,19 @@
 import os
+import sys
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+SIMULATION_DIR = BASE_DIR.parent / 'simulation'
+PREDICTION_DIR = BASE_DIR.parent / 'prediction'
+
+if SIMULATION_DIR.exists():
+    sys.path.append(str(SIMULATION_DIR))
+
+if PREDICTION_DIR.exists():
+    sys.path.append(str(PREDICTION_DIR))
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)

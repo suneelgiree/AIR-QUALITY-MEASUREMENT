@@ -1,8 +1,32 @@
 import requests
+import os
+import sys
+import json
 import numpy as np
+import joblib
+from pathlib import Path
 from datetime import datetime, timedelta
 from django.conf import settings
 
+# Add simulation and prediction directories to Python path
+BASE_DIR = Path(settings.BASE_DIR)
+SIMULATION_DIR = BASE_DIR.parent / 'simulation'
+PREDICTION_DIR = BASE_DIR.parent / 'prediction'
+
+if str(SIMULATION_DIR) not in sys.path:
+    sys.path.append(str(SIMULATION_DIR))
+
+if str(PREDICTION_DIR) not in sys.path:
+    sys.path.append(str(PREDICTION_DIR))
+
+# Import from simulation directory - use the class-based implementation
+try:
+    from AQI_Calculator import AQICalculator
+except ImportError as e:
+    print(f"Error importing AQI_Calculator: {e}")
+    # No fallback needed since we'll handle this in the AQICalculatorService
+
+# Keep your existing weather service
 class WeatherService:
     @staticmethod
     def geocode_location(location):
@@ -102,3 +126,219 @@ class WeatherPredictionModel:
             })
         
         return predictions
+
+# Updated AQI Calculator Service to use your class-based implementation
+class AQICalculatorService:
+    _calculator = None
+    
+    @classmethod
+    def get_calculator(cls):
+        """Get or create AQI calculator instance"""
+        if cls._calculator is None:
+            try:
+                cls._calculator = AQICalculator()
+            except NameError:
+                print("AQICalculator class not available, creating minimal implementation")
+                # Minimal implementation if the import fails
+                from dataclasses import dataclass
+                
+                @dataclass
+                class MinimalAQICalculator:
+                    def calculate_aqi(self, pm25=None, pm10=None):
+                        # Simple linear calculation for PM2.5
+                        if pm25 is not None:
+                            pm25_aqi = min(500, int(pm25 * 2))
+                        else:
+                            pm25_aqi = 0
+                            
+                        # Simple linear calculation for PM10
+                        if pm10 is not None:
+                            pm10_aqi = min(500, int(pm10))
+                        else:
+                            pm10_aqi = 0
+                            
+                        overall_aqi = max(pm25_aqi, pm10_aqi)
+                        
+                        return {
+                            'timestamp': datetime.now().isoformat(),
+                            'overall_aqi': overall_aqi,
+                            'dominant_pollutant': 'PM2.5' if pm25_aqi >= pm10_aqi else 'PM10',
+                            'dominant_concentration': pm25 if pm25_aqi >= pm10_aqi else pm10,
+                            'individual_aqis': {'PM2.5': pm25_aqi, 'PM10': pm10_aqi},
+                            'concentrations': {'PM2.5': pm25, 'PM10': pm10}
+                        }
+                    
+                    def get_aqi_category(self, aqi_value):
+                        if aqi_value <= 50:
+                            return {'category': 'Good', 'color': 'Green'}
+                        elif aqi_value <= 100:
+                            return {'category': 'Moderate', 'color': 'Yellow'}
+                        elif aqi_value <= 150:
+                            return {'category': 'Unhealthy for Sensitive Groups', 'color': 'Orange'}
+                        elif aqi_value <= 200:
+                            return {'category': 'Unhealthy', 'color': 'Red'}
+                        elif aqi_value <= 300:
+                            return {'category': 'Very Unhealthy', 'color': 'Purple'}
+                        else:
+                            return {'category': 'Hazardous', 'color': 'Maroon'}
+                
+                cls._calculator = MinimalAQICalculator()
+                
+        return cls._calculator
+    
+    @staticmethod
+    def read_sensor_data(use_simulated=True):
+        """Read sensor data from simulation files or real sensors"""
+        try:
+            data = {}
+            
+            # Read from simulation files
+            if use_simulated:
+                # Read from individual sensor files
+                pms_file = SIMULATION_DIR / 'pms7003_data.json'
+                if pms_file.exists():
+                    with open(pms_file, 'r') as f:
+                        pms_data = json.load(f)
+                        if isinstance(pms_data, list) and pms_data:
+                            # Get latest reading if it's an array of readings
+                            latest = pms_data[-1]
+                            data['pm25'] = latest.get('pm2_5_standard', 0)
+                            data['pm10'] = latest.get('pm10_standard', 0)
+                        else:
+                            # Direct reading if it's not an array
+                            data['pm25'] = pms_data.get('pm2_5_standard', pms_data.get('pm25', 0))
+                            data['pm10'] = pms_data.get('pm10_standard', pms_data.get('pm10', 0))
+                
+                # BME280 sensor data (temperature, humidity, pressure)
+                bme_file = SIMULATION_DIR / 'bme280_data.json'
+                if bme_file.exists():
+                    with open(bme_file, 'r') as f:
+                        bme_data = json.load(f)
+                        if isinstance(bme_data, list) and bme_data:
+                            # Get latest reading if it's an array
+                            latest = bme_data[-1]
+                            data['temperature'] = latest.get('temperature')
+                            data['humidity'] = latest.get('humidity')
+                            data['pressure'] = latest.get('pressure')
+                        else:
+                            # Direct reading if it's not an array
+                            data['temperature'] = bme_data.get('temperature')
+                            data['humidity'] = bme_data.get('humidity')
+                            data['pressure'] = bme_data.get('pressure')
+            else:
+                # In production, implement real sensor reading here
+                # Example: data = read_from_hardware_sensors()
+                pass
+                
+            # Add timestamp
+            data['timestamp'] = datetime.now().isoformat()
+            return data
+            
+        except Exception as e:
+            print(f"Error reading sensor data: {str(e)}")
+            # Return fallback data
+            return {
+                'pm25': 15.0,
+                'pm10': 30.0,
+                'temperature': 25.0,
+                'humidity': 50.0,
+                'pressure': 1013.0,
+                'timestamp': datetime.now().isoformat()
+            }
+    
+    @classmethod
+    def calculate_aqi_from_data(cls, sensor_data):
+        """Calculate AQI using data from sensors"""
+        try:
+            # Get calculator instance
+            calculator = cls.get_calculator()
+            
+            # Extract relevant values
+            pm25 = float(sensor_data.get('pm25', 0))
+            pm10 = float(sensor_data.get('pm10', 0))
+            
+            # Use your class-based AQI calculator
+            aqi_result = calculator.calculate_aqi(pm25=pm25, pm10=pm10)
+            
+            # Get category information
+            category_info = calculator.get_aqi_category(aqi_result['overall_aqi'])
+            
+            # Format response
+            return {
+                'aqi': aqi_result['overall_aqi'],
+                'aqi_pm25': aqi_result['individual_aqis'].get('PM2.5', 0),
+                'aqi_pm10': aqi_result['individual_aqis'].get('PM10', 0),
+                'pm25': pm25,
+                'pm10': pm10,
+                'category': category_info['category'],
+                'color': category_info['color'],
+                'description': category_info.get('description', ''),
+                'temperature': sensor_data.get('temperature'),
+                'humidity': sensor_data.get('humidity'),
+                'pressure': sensor_data.get('pressure'),
+                'timestamp': sensor_data.get('timestamp')
+            }
+        except Exception as e:
+            import traceback
+            print(f"Error calculating AQI: {str(e)}")
+            print(traceback.format_exc())
+            raise
+
+# ML Models Integration
+class PredictionService:
+    @staticmethod
+    def get_available_models():
+        """Get list of available prediction models"""
+        models = []
+        for file in PREDICTION_DIR.glob('*.pkl'):
+            if file.name.endswith('_model.pkl'):
+                models.append(file.name)
+        return models
+    
+    @staticmethod
+    def predict_aqi(aqi_data, model_name='ridge_model.pkl'):
+        """
+        Predict future AQI using ML models
+        
+        Args:
+            aqi_data: Dict with current air quality readings
+            model_name: Name of the model file to use
+            
+        Returns:
+            Dict with prediction results
+        """
+        try:
+            model_path = PREDICTION_DIR / model_name
+            
+            if not model_path.exists():
+                print(f"Model file not found: {model_path}")
+                return {'error': f"Model not found: {model_name}"}
+                
+            # Load model
+            model = joblib.load(model_path)
+            
+            # Prepare features - adjust based on what your model expects
+            features = [
+                aqi_data.get('aqi', 0),
+                aqi_data.get('pm25', 0),
+                aqi_data.get('pm10', 0),
+                aqi_data.get('temperature', 25),
+                aqi_data.get('humidity', 50),
+                aqi_data.get('pressure', 1013)
+            ]
+            
+            # Reshape for prediction
+            X = np.array(features).reshape(1, -1)
+            
+            # Make prediction
+            prediction = model.predict(X)[0]
+            
+            return {
+                'predicted_aqi_24h': float(prediction),
+                'model_used': model_name
+            }
+        except Exception as e:
+            import traceback
+            print(f"Error predicting with {model_name}: {str(e)}")
+            print(traceback.format_exc())
+            return {'error': str(e)}
