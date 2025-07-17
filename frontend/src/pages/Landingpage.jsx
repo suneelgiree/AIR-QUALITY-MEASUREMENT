@@ -17,62 +17,9 @@ import person4 from '../assets/person4.jpg';
 import bg1 from '../assets/bg1.jpg';
 import bg2 from '../assets/bg2.jpg';
 import bg3 from '../assets/bg3.jpg';
+import { useTranslation } from 'react-i18next';
 
 const bgImages = [bg1, bg2, bg3];
-
-const features = [
-  {
-    icon: RefreshCw,
-    title: 'Real-time Air Quality Monitoring',
-    description: 'Continuous collection of air pollution data using IoT sensor networks deployed across urban areas.'
-  },
-  {
-    icon: BarChart2,
-    title: 'Accurate AQI Prediction',
-    description: 'Advanced machine learning models predict future air quality indices to help inform preventive measures.'
-  },
-  {
-    icon: Globe,
-    title: 'Multilingual Support',
-    description: 'Our platform supports multiple languages to serve diverse urban communities effectively.'
-  },
-  {
-    icon: Bell,
-    title: 'Real-time Alerts & Notifications',
-    description: 'Get instant air quality alerts via browser notifications and email to stay informed and safe.'
-  }
-];
-
-const team = [
-  {
-    name: 'Slok Regmi',
-    role: 'AI And Sensor Specialist',
-    desc: 'Leads the integration of AI models and IoT sensors for accurate, real-time air quality monitoring.',
-    link: 'https://www.facebook.com/search/top/?q=slok',
-    photo: person1
-  },
-  {
-    name: 'Suneel Giri',
-    role: 'Backend Developer',
-    desc: 'Develops and maintains robust backend systems, ensuring secure and efficient data processing.',
-    link: 'https://www.facebook.com/suneel.giri946',
-    photo: person2
-  },
-  {
-    name: 'Prajil Baral',
-    role: 'Documentation Specialist',
-    desc: 'Creates clear, user-friendly documentation and guides for both users and developers.',
-    link: 'https://www.facebook.com/prajeel',
-    photo: person3
-  },
-  {
-    name: 'Laxman Khatri',
-    role: 'frontend Developer',
-    desc: 'Designs and implements intuitive, responsive user interfaces for a seamless user experience.',
-    link: 'https://www.facebook.com/laxman.khatri.328/',
-    photo: person4
-  }
-];
 
 const LandingPage = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -80,6 +27,8 @@ const LandingPage = () => {
   const [language, setLanguage] = useState('English');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bgIndex, setBgIndex] = useState(0);
+
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -96,31 +45,91 @@ const LandingPage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleLanguageSelect = (lang) => {
-    setLanguage(lang);
-    setLangOpen(false);
-  };
+  // Features with translations
+  const features = [
+    {
+      icon: RefreshCw,
+      title: t('features.feature1_title'),
+      description: t('features.feature1_desc'),
+    },
+    {
+      icon: BarChart2,
+      title: t('features.feature2_title'),
+      description: t('features.feature2_desc'),
+    },
+    {
+      icon: Globe,
+      title: t('features.feature3_title'),
+      description: t('features.feature3_desc'),
+    },
+    {
+      icon: Bell,
+      title: t('features.feature4_title'),
+      description: t('features.feature4_desc'),
+    },
+  ];
 
-  // Navbar links for reuse
+  // Team can remain static or add translations similarly if needed
+const team = [
+  {
+    name: 'Slok Regmi',
+    key: 'slok',
+    link: 'https://www.facebook.com/search/top/?q=slok',
+    photo: person1,
+  },
+  {
+    name: 'Suneel Giri',
+    key: 'suneel',
+    link: 'https://www.facebook.com/suneel.giri946',
+    photo: person2,
+  },
+  {
+    name: 'Prajil Baral',
+    key: 'prajil',
+    link: 'https://www.facebook.com/prajeel',
+    photo: person3,
+  },
+  {
+    name: 'Laxman Khatri',
+    key: 'laxman',
+    link: 'https://www.facebook.com/laxman.khatri.328/',
+    photo: person4,
+  },
+];
+
+
+  // Navbar links (use translated text directly)
   const navLinks = (
     <>
-      <a href="/" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
-        Home
+      <a
+        href="/"
+        className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2"
+      >
+        {t('navbar.home')}
       </a>
-{/*       <a href="/aqi" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
-        AQI
-      </a> */}
-      <a href="#services" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
-        Our Services
+      <a
+        href="#services"
+        className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2"
+      >
+        {t('navbar.services')}
       </a>
-{/*       <a href="/forecasting" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
-        Forecasting
-      </a> */}
-      <a href="#aboutus" className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2">
-        About Us
+      <a
+        href="#aboutus"
+        className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2"
+      >
+        {t('navbar.about')}
       </a>
     </>
   );
+
+  // Sync local language state with i18n on mount
+  useEffect(() => {
+    const currentLang = i18n.language;
+    if (currentLang === 'en') setLanguage('English');
+    else if (currentLang === 'np') setLanguage('Nepali');
+    else if (currentLang === 'hi') setLanguage('Hindi');
+    else setLanguage('English');
+  }, [i18n.language]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-slate-50">
@@ -130,7 +139,7 @@ const LandingPage = () => {
         langOpen={langOpen}
         setLangOpen={setLangOpen}
         language={language}
-        handleLanguageSelect={handleLanguageSelect}
+        setLanguage={setLanguage}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
       />
