@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Users, Check } from 'lucide-react';
+import { Eye, EyeOff, Users, Check, MapPin } from 'lucide-react';
+import { useTranslation } from 'react-i18next';  // <-- import translation hook
+import authService from '../services/api/auth';
 
 const RegisterPage = () => {
+  const { t } = useTranslation();  // <-- initialize translation
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    location: ''
   });
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -27,25 +33,70 @@ const RegisterPage = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setApiError('');
+
+    // Validation
     const newErrors = {};
-    if (!formData.fullName) newErrors.fullName = 'Full name is required';
-    if (!formData.email) newErrors.email = 'Email is required';
-    if (!formData.password) newErrors.password = 'Password is required';
+    if (!formData.fullName) newErrors.fullName = t('register.errors.fullNameRequired');
+    if (!formData.email) newErrors.email = t('register.errors.emailRequired');
+    if (!formData.password) newErrors.password = t('register.errors.passwordRequired');
     if (formData.password && formData.password.length < 6)
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('register.errors.passwordMinLength');
     if (formData.password !== formData.confirmPassword)
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('register.errors.passwordMismatch');
+    if (!formData.location) newErrors.location = t('register.errors.locationRequired');
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    // Mock registration logic
-    localStorage.setItem('isAuthenticated', 'true');
-    navigate('/login');
+    // API registration
+    setIsLoading(true);
+    try {
+      await authService.register({
+        email: formData.email,
+        password: formData.password,
+        password_confirm: formData.confirmPassword,
+        full_name: formData.fullName,
+        location: formData.location
+      });
+
+      navigate('/login', {
+        state: {
+          successMessage: t('register.successMessage')
+        }
+      });
+    } catch (error) {
+      if (error.response) {
+        if (error.response.status === 400) {
+          const serverErrors = error.response.data;
+          const fieldErrors = {};
+          if (serverErrors.email) fieldErrors.email = serverErrors.email[0];
+          if (serverErrors.password) fieldErrors.password = serverErrors.password[0];
+          if (serverErrors.password_confirm) fieldErrors.confirmPassword = serverErrors.password_confirm[0];
+          if (serverErrors.full_name) fieldErrors.fullName = serverErrors.full_name[0];
+          if (serverErrors.location) fieldErrors.location = serverErrors.location[0];
+          if (Object.keys(fieldErrors).length > 0) {
+            setErrors(fieldErrors);
+          } else if (serverErrors.non_field_errors) {
+            setApiError(serverErrors.non_field_errors[0]);
+          } else {
+            setApiError(error.response.data.detail || t('register.apiErrorGeneric'));
+          }
+        } else {
+          setApiError(t('register.apiErrorGeneric'));
+        }
+      } else if (error.request) {
+        setApiError(t('register.apiErrorNetwork'));
+      } else {
+        setApiError(t('register.apiErrorUnexpected'));
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -60,14 +111,19 @@ const RegisterPage = () => {
               BreathSafe
             </span>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-          
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('register.createAccount')}</h1>
         </div>
+
+        {apiError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {apiError}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-              Full Name
+              {t('register.fullName')}
             </label>
             <input
               type="text"
@@ -78,14 +134,15 @@ const RegisterPage = () => {
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                 errors.fullName ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="Enter your full name"
+              placeholder={t('register.fullNamePlaceholder')}
+              disabled={isLoading}
             />
             {errors.fullName && <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>}
           </div>
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              {t('register.email')}
             </label>
             <input
               type="email"
@@ -96,14 +153,37 @@ const RegisterPage = () => {
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                 errors.email ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="Enter your email"
+              placeholder={t('register.emailPlaceholder')}
+              disabled={isLoading}
             />
             {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
           </div>
 
           <div>
+            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+              {t('register.location')}
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                  errors.location ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder={t('register.locationPlaceholder')}
+                disabled={isLoading}
+              />
+              <MapPin className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            </div>
+            {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location}</p>}
+          </div>
+
+          <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
+              {t('register.password')}
             </label>
             <div className="relative">
               <input
@@ -115,13 +195,15 @@ const RegisterPage = () => {
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-12 ${
                   errors.password ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="Create a password"
+                placeholder={t('register.passwordPlaceholder')}
+                disabled={isLoading}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 tabIndex={-1}
+                disabled={isLoading}
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -131,7 +213,7 @@ const RegisterPage = () => {
 
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-              Confirm Password
+              {t('register.confirmPassword')}
             </label>
             <div className="relative">
               <input
@@ -143,13 +225,15 @@ const RegisterPage = () => {
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-12 ${
                   errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="Confirm your password"
+                placeholder={t('register.confirmPasswordPlaceholder')}
+                disabled={isLoading}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 tabIndex={-1}
+                disabled={isLoading}
               >
                 {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -158,34 +242,68 @@ const RegisterPage = () => {
           </div>
 
           <div className="flex items-start space-x-3">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               id="terms"
-              className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+              className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               required
+              disabled={isLoading}
             />
             <label htmlFor="terms" className="text-sm text-gray-600">
-              I agree to the{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-500">Terms of Service</a>
-              {' '}and{' '}
-              <a href="#" className="text-blue-600 hover:text-blue-500">Privacy Policy</a>
+              {t('register.agreeTo')}{' '}
+              <a href="#" className="text-blue-600 hover:text-blue-500">
+                {t('register.termsOfService')}
+              </a>{' '}
+              {t('register.and')}{' '}
+              <a href="#" className="text-blue-600 hover:text-blue-500">
+                {t('register.privacyPolicy')}
+              </a>
             </label>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-blue-700 hover:to-green-700 transition-all transform hover:scale-[1.02] focus:ring-4 focus:ring-blue-200 flex items-center justify-center space-x-2"
+            className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-blue-700 hover:to-green-700 transition-all transform hover:scale-[1.02] focus:ring-4 focus:ring-blue-200 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
+            disabled={isLoading}
           >
-            <Check className="w-5 h-5" />
-            <span>Create Account</span>
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <svg
+                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                {t('register.creatingAccount')}
+              </div>
+            ) : (
+              <>
+                <Check className="w-5 h-5" />
+                <span>{t('register.createAccount')}</span>
+              </>
+            )}
           </button>
         </form>
 
         <div className="mt-8 text-center">
           <p className="text-gray-600">
-            Already have an account?{' '}
+            {t('register.alreadyHaveAccount')}{' '}
             <Link to="/login" className="text-blue-600 hover:text-blue-500 font-semibold">
-              Sign in here
+              {t('register.signInHere')}
             </Link>
           </p>
         </div>

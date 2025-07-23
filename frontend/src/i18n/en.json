@@ -1,0 +1,100 @@
+{
+  "hero": {
+    "breatheEasy": "Breathe Easy",
+    "liveSafe": "Live Safe",
+    "subtitle": "Smarter cities start with safer air, BreathSafe leads the way",
+    "getStartedFree": "Get Started Free"
+  },
+  "navbar": {
+    "home": "Home",
+    "services": "Our Services",
+    "about": "About Us",
+    "getStarted": "Get Started"
+  },
+  "services": {
+    "title": "Our Services"
+  },
+  "features": {
+    "feature1_title": "Real-time Air Quality Monitoring",
+    "feature1_desc": "Continuous collection of air pollution data using IoT sensor networks deployed across urban areas.",
+    "feature2_title": "Accurate AQI Prediction",
+    "feature2_desc": "Advanced machine learning models predict future air quality indices to help inform preventive measures.",
+    "feature3_title": "Multilingual Support",
+    "feature3_desc": "Our platform supports multiple languages to serve diverse urban communities effectively.",
+    "feature4_title": "Real-time Alerts & Notifications",
+    "feature4_desc": "Get instant air quality alerts via browser notifications and email to stay informed and safe."
+  },
+  "about": {
+    "title": "About Us"
+  },
+  "team": {
+    "slok": {
+      "role": "AI And Sensor Specialist",
+      "desc": "Leads the integration of AI models and IoT sensors for accurate, real-time air quality monitoring."
+    },
+    "suneel": {
+      "role": "Backend Developer",
+      "desc": "Develops and maintains robust backend systems, ensuring secure and efficient data processing."
+    },
+    "prajil": {
+      "role": "Documentation Specialist",
+      "desc": "Creates clear, user-friendly documentation and guides for both users and developers."
+    },
+    "laxman": {
+      "role": "Frontend Developer",
+      "desc": "Designs and implements intuitive, responsive user interfaces for a seamless user experience."
+    }
+  },
+  "register": {
+    "createAccount": "Create Account",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your full name",
+    "email": "Email Address",
+    "emailPlaceholder": "Enter your email",
+    "location": "Location",
+    "locationPlaceholder": "City, Country",
+    "password": "Password",
+    "passwordPlaceholder": "Create a password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "agreeTo": "I agree to the",
+    "termsOfService": "Terms of Service",
+    "privacyPolicy": "Privacy Policy",
+    "creatingAccount": "Creating Account...",
+    "alreadyHaveAccount": "Already have an account?",
+    "signInHere": "Sign in here",
+    "successMessage": "Registration successful! Please log in with your new account.",
+    "errors": {
+      "fullNameRequired": "Full name is required",
+      "emailRequired": "Email is required",
+      "passwordRequired": "Password is required",
+      "passwordMinLength": "Password must be at least 6 characters",
+      "passwordMismatch": "Passwords do not match",
+      "locationRequired": "Location is required"
+    },
+    "apiErrorGeneric": "Registration failed. Please try again later.",
+    "apiErrorNetwork": "Network error. Please check your connection.",
+    "apiErrorUnexpected": "An unexpected error occurred. Please try again."
+  },
+  
+  "login": {
+    "signIn": "Sign In",
+    "email": "Email Address",
+    "emailPlaceholder": "Enter your email",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password?",
+    "signingIn": "Signing In...",
+    "noAccount": "Don't have an account?",
+    "createAccount": "Create new account",
+    "errors": {
+      "emailRequired": "Email is required",
+      "passwordRequired": "Password is required",
+      "invalidCredentials": "Invalid email or password",
+      "networkError": "Network error. Please check your connection.",
+      "unexpectedError": "An unexpected error occurred. Please try again."
+    }
+  }
+
+}

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Globe, Menu, X } from 'lucide-react';
 import logo from '../assets/logo-transparent.png';
+import { useTranslation } from 'react-i18next';
 
 const Navbar = ({
   scrolled,
@@ -9,11 +10,21 @@ const Navbar = ({
   langOpen,
   setLangOpen,
   language,
-  handleLanguageSelect,
+  setLanguage,
   mobileOpen,
   setMobileOpen,
 }) => {
-  const navigate = useNavigate();
+  const { i18n, t } = useTranslation();
+
+  const handleLanguageSelect = (lang) => {
+    if (lang === 'English') i18n.changeLanguage('en');
+    else if (lang === 'Nepali') i18n.changeLanguage('np');
+    else if (lang === 'Hindi') i18n.changeLanguage('hi');
+    else i18n.changeLanguage('en');
+
+    setLanguage(lang);
+    setLangOpen(false);
+  };
 
   return (
     <nav
@@ -34,8 +45,26 @@ const Navbar = ({
           </div>
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-4">
-            {navLinks}
-            {/* Multilingual Dropdown */}
+            {/* Use translation for nav links */}
+            <Link
+              to="/"
+              className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2"
+            >
+              {t('navbar.home')}
+            </Link>
+            <a
+              href="#services"
+              className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2"
+            >
+              {t('navbar.services')}
+            </a>
+            <a
+              href="#aboutus"
+              className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2"
+            >
+              {t('navbar.about')}
+            </a>
+            {/* Language dropdown */}
             <div className="relative">
               <button
                 onClick={() => setLangOpen((v) => !v)}
@@ -49,24 +78,15 @@ const Navbar = ({
               </button>
               {langOpen && (
                 <div className="absolute right-0 mt-2 w-32 bg-white border border-blue-200 rounded-md shadow-lg z-50">
-                  <button
-                    onClick={() => handleLanguageSelect('English')}
-                    className="block w-full text-left px-4 py-2 hover:bg-blue-50"
-                  >
-                    English
-                  </button>
-                  <button
-                    onClick={() => handleLanguageSelect('Nepali')}
-                    className="block w-full text-left px-4 py-2 hover:bg-blue-50"
-                  >
-                    Nepali
-                  </button>
-                  <button
-                    onClick={() => handleLanguageSelect('Hindi')}
-                    className="block w-full text-left px-4 py-2 hover:bg-blue-50"
-                  >
-                    Hindi
-                  </button>
+                  {['English', 'Nepali', 'Hindi'].map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => handleLanguageSelect(lang)}
+                      className="block w-full text-left px-4 py-2 hover:bg-blue-50"
+                    >
+                      {lang}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -74,7 +94,7 @@ const Navbar = ({
               to="/register"
               className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-2 rounded-full hover:from-blue-700 hover:to-green-700 transition-all transform hover:scale-105 font-semibold"
             >
-              Get Started
+              {t('navbar.getStarted')}
             </Link>
           </div>
           {/* Mobile Hamburger */}
@@ -90,8 +110,29 @@ const Navbar = ({
         {/* Mobile Menu */}
         {mobileOpen && (
           <div className="md:hidden bg-white/95 backdrop-blur-md rounded-b-xl shadow-lg px-4 pt-2 pb-4 space-y-2">
-            {navLinks}
-            {/* Multilingual Dropdown */}
+            {/* Mobile nav links */}
+            <Link
+              to="/"
+              className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2"
+              onClick={() => setMobileOpen(false)}
+            >
+              {t('navbar.home')}
+            </Link>
+            <a
+              href="#services"
+              className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2"
+              onClick={() => setMobileOpen(false)}
+            >
+              {t('navbar.services')}
+            </a>
+            <a
+              href="#aboutus"
+              className="text-blue-800 hover:text-green-600 transition-colors font-medium block py-2 px-2"
+              onClick={() => setMobileOpen(false)}
+            >
+              {t('navbar.about')}
+            </a>
+            {/* Language dropdown */}
             <div className="relative">
               <button
                 onClick={() => setLangOpen((v) => !v)}
@@ -105,32 +146,27 @@ const Navbar = ({
               </button>
               {langOpen && (
                 <div className="absolute right-0 mt-2 w-32 bg-white border border-blue-200 rounded-md shadow-lg z-50">
-                  <button
-                    onClick={() => handleLanguageSelect('English')}
-                    className="block w-full text-left px-4 py-2 hover:bg-blue-50"
-                  >
-                    English
-                  </button>
-                  <button
-                    onClick={() => handleLanguageSelect('Nepali')}
-                    className="block w-full text-left px-4 py-2 hover:bg-blue-50"
-                  >
-                    Nepali
-                  </button>
-                  <button
-                    onClick={() => handleLanguageSelect('Hindi')}
-                    className="block w-full text-left px-4 py-2 hover:bg-blue-50"
-                  >
-                    Hindi
-                  </button>
+                  {['English', 'Nepali', 'Hindi'].map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => {
+                        handleLanguageSelect(lang);
+                        setMobileOpen(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 hover:bg-blue-50"
+                    >
+                      {lang}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
             <Link
               to="/register"
               className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-2 rounded-full hover:from-blue-700 hover:to-green-700 transition-all transform hover:scale-105 font-semibold block mt-2"
+              onClick={() => setMobileOpen(false)}
             >
-              Get Started
+              {t('navbar.getStarted')}
             </Link>
           </div>
         )}
