@@ -1,0 +1,1850 @@
+[
+  {
+    "timestamp": "2025-07-23T20:18:25.713458",
+    "overall_aqi": 173,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 98,
+    "individual_aqis": {
+      "PM2.5": 173,
+      "PM10": 82
+    },
+    "concentrations": {
+      "PM1.0": 57,
+      "PM2.5": 98,
+      "PM10": 118
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:18:30.960230",
+    "overall_aqi": 171,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 95,
+    "individual_aqis": {
+      "PM2.5": 171,
+      "PM10": 79
+    },
+    "concentrations": {
+      "PM1.0": 56,
+      "PM2.5": 95,
+      "PM10": 112
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:18:36.207152",
+    "overall_aqi": 170,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 93,
+    "individual_aqis": {
+      "PM2.5": 170,
+      "PM10": 78
+    },
+    "concentrations": {
+      "PM1.0": 56,
+      "PM2.5": 93,
+      "PM10": 109
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:18:41.454356",
+    "overall_aqi": 169,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 91,
+    "individual_aqis": {
+      "PM2.5": 169,
+      "PM10": 76
+    },
+    "concentrations": {
+      "PM1.0": 55,
+      "PM2.5": 91,
+      "PM10": 106
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:18:46.700916",
+    "overall_aqi": 168,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 89,
+    "individual_aqis": {
+      "PM2.5": 168,
+      "PM10": 75
+    },
+    "concentrations": {
+      "PM1.0": 54,
+      "PM2.5": 89,
+      "PM10": 103
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:18:51.951655",
+    "overall_aqi": 168,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 89,
+    "individual_aqis": {
+      "PM2.5": 168,
+      "PM10": 75
+    },
+    "concentrations": {
+      "PM1.0": 55,
+      "PM2.5": 89,
+      "PM10": 104
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:18:57.198985",
+    "overall_aqi": 167,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 87,
+    "individual_aqis": {
+      "PM2.5": 167,
+      "PM10": 73
+    },
+    "concentrations": {
+      "PM1.0": 54,
+      "PM2.5": 87,
+      "PM10": 100
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:02.445552",
+    "overall_aqi": 167,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 87,
+    "individual_aqis": {
+      "PM2.5": 167,
+      "PM10": 73
+    },
+    "concentrations": {
+      "PM1.0": 55,
+      "PM2.5": 87,
+      "PM10": 99
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:07.692221",
+    "overall_aqi": 167,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 87,
+    "individual_aqis": {
+      "PM2.5": 167,
+      "PM10": 72
+    },
+    "concentrations": {
+      "PM1.0": 54,
+      "PM2.5": 87,
+      "PM10": 98
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:12.938997",
+    "overall_aqi": 167,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 86,
+    "individual_aqis": {
+      "PM2.5": 167,
+      "PM10": 72
+    },
+    "concentrations": {
+      "PM1.0": 53,
+      "PM2.5": 86,
+      "PM10": 97
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:18.185979",
+    "overall_aqi": 167,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 87,
+    "individual_aqis": {
+      "PM2.5": 167,
+      "PM10": 71
+    },
+    "concentrations": {
+      "PM1.0": 53,
+      "PM2.5": 87,
+      "PM10": 96
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:23.432923",
+    "overall_aqi": 167,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 87,
+    "individual_aqis": {
+      "PM2.5": 167,
+      "PM10": 70
+    },
+    "concentrations": {
+      "PM1.0": 52,
+      "PM2.5": 87,
+      "PM10": 94
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:28.683914",
+    "overall_aqi": 166,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 85,
+    "individual_aqis": {
+      "PM2.5": 166,
+      "PM10": 69
+    },
+    "concentrations": {
+      "PM1.0": 52,
+      "PM2.5": 85,
+      "PM10": 92
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:33.930708",
+    "overall_aqi": 164,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 81,
+    "individual_aqis": {
+      "PM2.5": 164,
+      "PM10": 68
+    },
+    "concentrations": {
+      "PM1.0": 51,
+      "PM2.5": 81,
+      "PM10": 90
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:39.177408",
+    "overall_aqi": 164,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 81,
+    "individual_aqis": {
+      "PM2.5": 164,
+      "PM10": 68
+    },
+    "concentrations": {
+      "PM1.0": 51,
+      "PM2.5": 81,
+      "PM10": 90
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:44.428241",
+    "overall_aqi": 163,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 78,
+    "individual_aqis": {
+      "PM2.5": 163,
+      "PM10": 67
+    },
+    "concentrations": {
+      "PM1.0": 49,
+      "PM2.5": 78,
+      "PM10": 87
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:49.675207",
+    "overall_aqi": 162,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 76,
+    "individual_aqis": {
+      "PM2.5": 162,
+      "PM10": 65
+    },
+    "concentrations": {
+      "PM1.0": 48,
+      "PM2.5": 76,
+      "PM10": 84
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:19:54.922036",
+    "overall_aqi": 161,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 75,
+    "individual_aqis": {
+      "PM2.5": 161,
+      "PM10": 65
+    },
+    "concentrations": {
+      "PM1.0": 48,
+      "PM2.5": 75,
+      "PM10": 83
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:00.168942",
+    "overall_aqi": 161,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 74,
+    "individual_aqis": {
+      "PM2.5": 161,
+      "PM10": 64
+    },
+    "concentrations": {
+      "PM1.0": 47,
+      "PM2.5": 74,
+      "PM10": 82
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:05.415823",
+    "overall_aqi": 161,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 75,
+    "individual_aqis": {
+      "PM2.5": 161,
+      "PM10": 66
+    },
+    "concentrations": {
+      "PM1.0": 48,
+      "PM2.5": 75,
+      "PM10": 85
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:10.662542",
+    "overall_aqi": 161,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 75,
+    "individual_aqis": {
+      "PM2.5": 161,
+      "PM10": 66
+    },
+    "concentrations": {
+      "PM1.0": 48,
+      "PM2.5": 75,
+      "PM10": 86
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:15.909822",
+    "overall_aqi": 160,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 73,
+    "individual_aqis": {
+      "PM2.5": 160,
+      "PM10": 64
+    },
+    "concentrations": {
+      "PM1.0": 47,
+      "PM2.5": 73,
+      "PM10": 82
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:21.160319",
+    "overall_aqi": 160,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 73,
+    "individual_aqis": {
+      "PM2.5": 160,
+      "PM10": 63
+    },
+    "concentrations": {
+      "PM1.0": 48,
+      "PM2.5": 73,
+      "PM10": 79
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:26.407167",
+    "overall_aqi": 158,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 70,
+    "individual_aqis": {
+      "PM2.5": 158,
+      "PM10": 62
+    },
+    "concentrations": {
+      "PM1.0": 47,
+      "PM2.5": 70,
+      "PM10": 77
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:31.658069",
+    "overall_aqi": 158,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 69,
+    "individual_aqis": {
+      "PM2.5": 158,
+      "PM10": 62
+    },
+    "concentrations": {
+      "PM1.0": 46,
+      "PM2.5": 69,
+      "PM10": 77
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:36.905344",
+    "overall_aqi": 159,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 71,
+    "individual_aqis": {
+      "PM2.5": 159,
+      "PM10": 63
+    },
+    "concentrations": {
+      "PM1.0": 47,
+      "PM2.5": 71,
+      "PM10": 79
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:42.152005",
+    "overall_aqi": 159,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 71,
+    "individual_aqis": {
+      "PM2.5": 159,
+      "PM10": 63
+    },
+    "concentrations": {
+      "PM1.0": 46,
+      "PM2.5": 71,
+      "PM10": 80
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:47.398829",
+    "overall_aqi": 159,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 71,
+    "individual_aqis": {
+      "PM2.5": 159,
+      "PM10": 64
+    },
+    "concentrations": {
+      "PM1.0": 47,
+      "PM2.5": 71,
+      "PM10": 82
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:52.649560",
+    "overall_aqi": 159,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 71,
+    "individual_aqis": {
+      "PM2.5": 159,
+      "PM10": 64
+    },
+    "concentrations": {
+      "PM1.0": 47,
+      "PM2.5": 71,
+      "PM10": 82
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:20:57.896601",
+    "overall_aqi": 158,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 70,
+    "individual_aqis": {
+      "PM2.5": 158,
+      "PM10": 63
+    },
+    "concentrations": {
+      "PM1.0": 45,
+      "PM2.5": 70,
+      "PM10": 80
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:03.143410",
+    "overall_aqi": 160,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 72,
+    "individual_aqis": {
+      "PM2.5": 160,
+      "PM10": 64
+    },
+    "concentrations": {
+      "PM1.0": 46,
+      "PM2.5": 72,
+      "PM10": 82
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:08.394257",
+    "overall_aqi": 160,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 72,
+    "individual_aqis": {
+      "PM2.5": 160,
+      "PM10": 64
+    },
+    "concentrations": {
+      "PM1.0": 46,
+      "PM2.5": 72,
+      "PM10": 82
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:13.641195",
+    "overall_aqi": 159,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 71,
+    "individual_aqis": {
+      "PM2.5": 159,
+      "PM10": 64
+    },
+    "concentrations": {
+      "PM1.0": 45,
+      "PM2.5": 71,
+      "PM10": 81
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:18.888027",
+    "overall_aqi": 159,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 71,
+    "individual_aqis": {
+      "PM2.5": 159,
+      "PM10": 64
+    },
+    "concentrations": {
+      "PM1.0": 45,
+      "PM2.5": 71,
+      "PM10": 82
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:24.138837",
+    "overall_aqi": 158,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 70,
+    "individual_aqis": {
+      "PM2.5": 158,
+      "PM10": 64
+    },
+    "concentrations": {
+      "PM1.0": 45,
+      "PM2.5": 70,
+      "PM10": 81
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:29.385788",
+    "overall_aqi": 157,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 67,
+    "individual_aqis": {
+      "PM2.5": 157,
+      "PM10": 63
+    },
+    "concentrations": {
+      "PM1.0": 43,
+      "PM2.5": 67,
+      "PM10": 79
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:34.632653",
+    "overall_aqi": 156,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 66,
+    "individual_aqis": {
+      "PM2.5": 156,
+      "PM10": 62
+    },
+    "concentrations": {
+      "PM1.0": 43,
+      "PM2.5": 66,
+      "PM10": 78
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:39.879504",
+    "overall_aqi": 155,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 64,
+    "individual_aqis": {
+      "PM2.5": 155,
+      "PM10": 61
+    },
+    "concentrations": {
+      "PM1.0": 41,
+      "PM2.5": 64,
+      "PM10": 75
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:45.126511",
+    "overall_aqi": 156,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 65,
+    "individual_aqis": {
+      "PM2.5": 156,
+      "PM10": 61
+    },
+    "concentrations": {
+      "PM1.0": 42,
+      "PM2.5": 65,
+      "PM10": 76
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:50.373338",
+    "overall_aqi": 157,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 67,
+    "individual_aqis": {
+      "PM2.5": 157,
+      "PM10": 61
+    },
+    "concentrations": {
+      "PM1.0": 42,
+      "PM2.5": 67,
+      "PM10": 76
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:21:55.624079",
+    "overall_aqi": 157,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 67,
+    "individual_aqis": {
+      "PM2.5": 157,
+      "PM10": 61
+    },
+    "concentrations": {
+      "PM1.0": 41,
+      "PM2.5": 67,
+      "PM10": 75
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:00.870832",
+    "overall_aqi": 157,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 68,
+    "individual_aqis": {
+      "PM2.5": 157,
+      "PM10": 61
+    },
+    "concentrations": {
+      "PM1.0": 41,
+      "PM2.5": 68,
+      "PM10": 76
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:06.117890",
+    "overall_aqi": 157,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 67,
+    "individual_aqis": {
+      "PM2.5": 157,
+      "PM10": 61
+    },
+    "concentrations": {
+      "PM1.0": 41,
+      "PM2.5": 67,
+      "PM10": 76
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:11.364778",
+    "overall_aqi": 157,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 67,
+    "individual_aqis": {
+      "PM2.5": 157,
+      "PM10": 61
+    },
+    "concentrations": {
+      "PM1.0": 40,
+      "PM2.5": 67,
+      "PM10": 75
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:16.615557",
+    "overall_aqi": 156,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 66,
+    "individual_aqis": {
+      "PM2.5": 156,
+      "PM10": 60
+    },
+    "concentrations": {
+      "PM1.0": 39,
+      "PM2.5": 66,
+      "PM10": 74
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:21.862415",
+    "overall_aqi": 155,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 64,
+    "individual_aqis": {
+      "PM2.5": 155,
+      "PM10": 59
+    },
+    "concentrations": {
+      "PM1.0": 39,
+      "PM2.5": 64,
+      "PM10": 71
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:27.109216",
+    "overall_aqi": 156,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 65,
+    "individual_aqis": {
+      "PM2.5": 156,
+      "PM10": 59
+    },
+    "concentrations": {
+      "PM1.0": 40,
+      "PM2.5": 65,
+      "PM10": 72
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:32.356279",
+    "overall_aqi": 155,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 64,
+    "individual_aqis": {
+      "PM2.5": 155,
+      "PM10": 58
+    },
+    "concentrations": {
+      "PM1.0": 40,
+      "PM2.5": 64,
+      "PM10": 70
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:37.607189",
+    "overall_aqi": 156,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 65,
+    "individual_aqis": {
+      "PM2.5": 156,
+      "PM10": 58
+    },
+    "concentrations": {
+      "PM1.0": 40,
+      "PM2.5": 65,
+      "PM10": 70
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:42.853842",
+    "overall_aqi": 155,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 64,
+    "individual_aqis": {
+      "PM2.5": 155,
+      "PM10": 58
+    },
+    "concentrations": {
+      "PM1.0": 41,
+      "PM2.5": 64,
+      "PM10": 70
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:48.100697",
+    "overall_aqi": 155,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 63,
+    "individual_aqis": {
+      "PM2.5": 155,
+      "PM10": 59
+    },
+    "concentrations": {
+      "PM1.0": 40,
+      "PM2.5": 63,
+      "PM10": 71
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:53.347690",
+    "overall_aqi": 154,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 62,
+    "individual_aqis": {
+      "PM2.5": 154,
+      "PM10": 59
+    },
+    "concentrations": {
+      "PM1.0": 39,
+      "PM2.5": 62,
+      "PM10": 71
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:22:58.598523",
+    "overall_aqi": 154,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 62,
+    "individual_aqis": {
+      "PM2.5": 154,
+      "PM10": 59
+    },
+    "concentrations": {
+      "PM1.0": 40,
+      "PM2.5": 62,
+      "PM10": 72
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:03.845461",
+    "overall_aqi": 154,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 62,
+    "individual_aqis": {
+      "PM2.5": 154,
+      "PM10": 60
+    },
+    "concentrations": {
+      "PM1.0": 40,
+      "PM2.5": 62,
+      "PM10": 73
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:09.092136",
+    "overall_aqi": 154,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 62,
+    "individual_aqis": {
+      "PM2.5": 154,
+      "PM10": 59
+    },
+    "concentrations": {
+      "PM1.0": 39,
+      "PM2.5": 62,
+      "PM10": 71
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:14.339033",
+    "overall_aqi": 155,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 63,
+    "individual_aqis": {
+      "PM2.5": 155,
+      "PM10": 59
+    },
+    "concentrations": {
+      "PM1.0": 40,
+      "PM2.5": 63,
+      "PM10": 72
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:19.585853",
+    "overall_aqi": 154,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 62,
+    "individual_aqis": {
+      "PM2.5": 154,
+      "PM10": 59
+    },
+    "concentrations": {
+      "PM1.0": 39,
+      "PM2.5": 62,
+      "PM10": 71
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:24.836810",
+    "overall_aqi": 153,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 60,
+    "individual_aqis": {
+      "PM2.5": 153,
+      "PM10": 57
+    },
+    "concentrations": {
+      "PM1.0": 37,
+      "PM2.5": 60,
+      "PM10": 68
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:30.084264",
+    "overall_aqi": 153,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 59,
+    "individual_aqis": {
+      "PM2.5": 153,
+      "PM10": 57
+    },
+    "concentrations": {
+      "PM1.0": 38,
+      "PM2.5": 59,
+      "PM10": 67
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:35.330658",
+    "overall_aqi": 152,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 57,
+    "individual_aqis": {
+      "PM2.5": 152,
+      "PM10": 56
+    },
+    "concentrations": {
+      "PM1.0": 37,
+      "PM2.5": 57,
+      "PM10": 65
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:40.581493",
+    "overall_aqi": 152,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 58,
+    "individual_aqis": {
+      "PM2.5": 152,
+      "PM10": 56
+    },
+    "concentrations": {
+      "PM1.0": 37,
+      "PM2.5": 58,
+      "PM10": 66
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:45.828300",
+    "overall_aqi": 153,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 59,
+    "individual_aqis": {
+      "PM2.5": 153,
+      "PM10": 57
+    },
+    "concentrations": {
+      "PM1.0": 38,
+      "PM2.5": 59,
+      "PM10": 68
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:51.075320",
+    "overall_aqi": 153,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 59,
+    "individual_aqis": {
+      "PM2.5": 153,
+      "PM10": 57
+    },
+    "concentrations": {
+      "PM1.0": 37,
+      "PM2.5": 59,
+      "PM10": 67
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:23:56.326292",
+    "overall_aqi": 154,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 61,
+    "individual_aqis": {
+      "PM2.5": 154,
+      "PM10": 57
+    },
+    "concentrations": {
+      "PM1.0": 38,
+      "PM2.5": 61,
+      "PM10": 68
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:01.573025",
+    "overall_aqi": 153,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 60,
+    "individual_aqis": {
+      "PM2.5": 153,
+      "PM10": 57
+    },
+    "concentrations": {
+      "PM1.0": 37,
+      "PM2.5": 60,
+      "PM10": 67
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:06.823785",
+    "overall_aqi": 153,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 60,
+    "individual_aqis": {
+      "PM2.5": 153,
+      "PM10": 57
+    },
+    "concentrations": {
+      "PM1.0": 38,
+      "PM2.5": 60,
+      "PM10": 67
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:12.071204",
+    "overall_aqi": 153,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 59,
+    "individual_aqis": {
+      "PM2.5": 153,
+      "PM10": 56
+    },
+    "concentrations": {
+      "PM1.0": 37,
+      "PM2.5": 59,
+      "PM10": 65
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:17.317569",
+    "overall_aqi": 152,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 58,
+    "individual_aqis": {
+      "PM2.5": 152,
+      "PM10": 55
+    },
+    "concentrations": {
+      "PM1.0": 36,
+      "PM2.5": 58,
+      "PM10": 64
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:22.568493",
+    "overall_aqi": 152,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 58,
+    "individual_aqis": {
+      "PM2.5": 152,
+      "PM10": 55
+    },
+    "concentrations": {
+      "PM1.0": 35,
+      "PM2.5": 58,
+      "PM10": 64
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:27.815483",
+    "overall_aqi": 152,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 57,
+    "individual_aqis": {
+      "PM2.5": 152,
+      "PM10": 56
+    },
+    "concentrations": {
+      "PM1.0": 35,
+      "PM2.5": 57,
+      "PM10": 66
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:33.066200",
+    "overall_aqi": 151,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 56,
+    "individual_aqis": {
+      "PM2.5": 151,
+      "PM10": 55
+    },
+    "concentrations": {
+      "PM1.0": 35,
+      "PM2.5": 56,
+      "PM10": 64
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:38.313325",
+    "overall_aqi": 151,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 56,
+    "individual_aqis": {
+      "PM2.5": 151,
+      "PM10": 54
+    },
+    "concentrations": {
+      "PM1.0": 33,
+      "PM2.5": 56,
+      "PM10": 62
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:43.560142",
+    "overall_aqi": 152,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 57,
+    "individual_aqis": {
+      "PM2.5": 152,
+      "PM10": 54
+    },
+    "concentrations": {
+      "PM1.0": 34,
+      "PM2.5": 57,
+      "PM10": 62
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:48.810899",
+    "overall_aqi": 149,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 55,
+    "individual_aqis": {
+      "PM2.5": 149,
+      "PM10": 53
+    },
+    "concentrations": {
+      "PM1.0": 33,
+      "PM2.5": 55,
+      "PM10": 60
+    },
+    "category_info": {
+      "category": "Unhealthy for Sensitive Groups",
+      "color": "Orange",
+      "description": "Members of sensitive groups may experience health effects",
+      "range": "101-150"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:54.058042",
+    "overall_aqi": 151,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 56,
+    "individual_aqis": {
+      "PM2.5": 151,
+      "PM10": 54
+    },
+    "concentrations": {
+      "PM1.0": 34,
+      "PM2.5": 56,
+      "PM10": 62
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:24:59.304865",
+    "overall_aqi": 147,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 54,
+    "individual_aqis": {
+      "PM2.5": 147,
+      "PM10": 54
+    },
+    "concentrations": {
+      "PM1.0": 34,
+      "PM2.5": 54,
+      "PM10": 62
+    },
+    "category_info": {
+      "category": "Unhealthy for Sensitive Groups",
+      "color": "Orange",
+      "description": "Members of sensitive groups may experience health effects",
+      "range": "101-150"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:25:04.551719",
+    "overall_aqi": 149,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 55,
+    "individual_aqis": {
+      "PM2.5": 149,
+      "PM10": 55
+    },
+    "concentrations": {
+      "PM1.0": 35,
+      "PM2.5": 55,
+      "PM10": 63
+    },
+    "category_info": {
+      "category": "Unhealthy for Sensitive Groups",
+      "color": "Orange",
+      "description": "Members of sensitive groups may experience health effects",
+      "range": "101-150"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:25:09.802325",
+    "overall_aqi": 147,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 54,
+    "individual_aqis": {
+      "PM2.5": 147,
+      "PM10": 54
+    },
+    "concentrations": {
+      "PM1.0": 33,
+      "PM2.5": 54,
+      "PM10": 61
+    },
+    "category_info": {
+      "category": "Unhealthy for Sensitive Groups",
+      "color": "Orange",
+      "description": "Members of sensitive groups may experience health effects",
+      "range": "101-150"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:25:15.049211",
+    "overall_aqi": 147,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 54,
+    "individual_aqis": {
+      "PM2.5": 147,
+      "PM10": 53
+    },
+    "concentrations": {
+      "PM1.0": 33,
+      "PM2.5": 54,
+      "PM10": 60
+    },
+    "category_info": {
+      "category": "Unhealthy for Sensitive Groups",
+      "color": "Orange",
+      "description": "Members of sensitive groups may experience health effects",
+      "range": "101-150"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:25:20.296055",
+    "overall_aqi": 147,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 54,
+    "individual_aqis": {
+      "PM2.5": 147,
+      "PM10": 53
+    },
+    "concentrations": {
+      "PM1.0": 33,
+      "PM2.5": 54,
+      "PM10": 59
+    },
+    "category_info": {
+      "category": "Unhealthy for Sensitive Groups",
+      "color": "Orange",
+      "description": "Members of sensitive groups may experience health effects",
+      "range": "101-150"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:25:25.547057",
+    "overall_aqi": 149,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 55,
+    "individual_aqis": {
+      "PM2.5": 149,
+      "PM10": 53
+    },
+    "concentrations": {
+      "PM1.0": 33,
+      "PM2.5": 55,
+      "PM10": 60
+    },
+    "category_info": {
+      "category": "Unhealthy for Sensitive Groups",
+      "color": "Orange",
+      "description": "Members of sensitive groups may experience health effects",
+      "range": "101-150"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:25:30.794005",
+    "overall_aqi": 152,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 57,
+    "individual_aqis": {
+      "PM2.5": 152,
+      "PM10": 54
+    },
+    "concentrations": {
+      "PM1.0": 35,
+      "PM2.5": 57,
+      "PM10": 61
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:25:36.040706",
+    "overall_aqi": 151,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 56,
+    "individual_aqis": {
+      "PM2.5": 151,
+      "PM10": 53
+    },
+    "concentrations": {
+      "PM1.0": 34,
+      "PM2.5": 56,
+      "PM10": 60
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:25:41.287783",
+    "overall_aqi": 151,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 56,
+    "individual_aqis": {
+      "PM2.5": 151,
+      "PM10": 53
+    },
+    "concentrations": {
+      "PM1.0": 34,
+      "PM2.5": 56,
+      "PM10": 60
+    },
+    "category_info": {
+      "category": "Unhealthy",
+      "color": "Red",
+      "description": "Everyone may begin to experience health effects",
+      "range": "151-200"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:25:46.538501",
+    "overall_aqi": 147,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 54,
+    "individual_aqis": {
+      "PM2.5": 147,
+      "PM10": 52
+    },
+    "concentrations": {
+      "PM1.0": 34,
+      "PM2.5": 54,
+      "PM10": 58
+    },
+    "category_info": {
+      "category": "Unhealthy for Sensitive Groups",
+      "color": "Orange",
+      "description": "Members of sensitive groups may experience health effects",
+      "range": "101-150"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:25:51.785347",
+    "overall_aqi": 142,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 52,
+    "individual_aqis": {
+      "PM2.5": 142,
+      "PM10": 51
+    },
+    "concentrations": {
+      "PM1.0": 32,
+      "PM2.5": 52,
+      "PM10": 56
+    },
+    "category_info": {
+      "category": "Unhealthy for Sensitive Groups",
+      "color": "Orange",
+      "description": "Members of sensitive groups may experience health effects",
+      "range": "101-150"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:36:07.841150",
+    "overall_aqi": 97,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 34,
+    "individual_aqis": {
+      "PM2.5": 97,
+      "PM10": 37
+    },
+    "concentrations": {
+      "PM1.0": 21,
+      "PM2.5": 34,
+      "PM10": 40
+    },
+    "category_info": {
+      "category": "Moderate",
+      "color": "Yellow",
+      "description": "Air quality is acceptable for most people",
+      "range": "51-100"
+    }
+  },
+  {
+    "timestamp": "2025-07-23T20:46:08.177421",
+    "overall_aqi": 87,
+    "dominant_pollutant": "PM2.5",
+    "dominant_concentration": 29,
+    "individual_aqis": {
+      "PM2.5": 87,
+      "PM10": 30
+    },
+    "concentrations": {
+      "PM1.0": 18,
+      "PM2.5": 29,
+      "PM10": 32
+    },
+    "category_info": {
+      "category": "Moderate",
+      "color": "Yellow",
+      "description": "Air quality is acceptable for most people",
+      "range": "51-100"
+    }
+  }
+]

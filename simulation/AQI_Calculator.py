@@ -1,12 +1,11 @@
-#!/usr/bin/env python3
-"""
-Air Quality Index (AQI) Calculator
-Calculates AQI from PM2.5 and PM10 values using EPA standards
-"""
-
+import serial
+import serial.tools.list_ports
+import csv
+from datetime import datetime
+import time
+import re
 import json
 import math
-from datetime import datetime
 
 class AQICalculator:
     def __init__(self):
@@ -72,7 +71,6 @@ class AQICalculator:
         overall_aqi = max(aqi_values, key=lambda x: x[2])
         
         return {
-            'timestamp': datetime.now().isoformat(),
             'overall_aqi': overall_aqi[2],
             'dominant_pollutant': overall_aqi[0],
             'dominant_concentration': overall_aqi[1],
@@ -96,151 +94,96 @@ class AQICalculator:
             'description': 'Health alert: everyone may experience serious health effects',
             'range': '301-500'
         }
-    
-    def calculate_from_files(self, pms_file='pms7003_data.json', bme_file='bme280_data.json'):
-        """Calculate AQI from saved sensor data files"""
-        try:
-            # Read PMS7003 data
-            with open(pms_file, 'r') as f:
-                pms_data = json.load(f)
-            
-            if not pms_data:
-                print("No PMS7003 data found")
-                return None
-            
-            # Get latest reading
-            latest_pms = pms_data[-1]
-            pm25 = latest_pms.get('pm2_5_standard')
-            pm10 = latest_pms.get('pm10_standard')
-            
-            # Calculate AQI
-            aqi_result = self.calculate_aqi(pm25=pm25, pm10=pm10)
-            
-            if aqi_result:
-                # Get category information
-                category_info = self.get_aqi_category(aqi_result['overall_aqi'])
-                aqi_result['category_info'] = category_info
-                
-                # Add environmental data if available
-                try:
-                    with open(bme_file, 'r') as f:
-                        bme_data = json.load(f)
-                    if bme_data:
-                        latest_bme = bme_data[-1]
-                        aqi_result['environmental_data'] = {
-                            'temperature': latest_bme.get('temperature'),
-                            'humidity': latest_bme.get('humidity'),
-                            'pressure': latest_bme.get('pressure')
-                        }
-                except FileNotFoundError:
-                    print("BME280 data file not found, continuing without environmental data")
-            
-            return aqi_result
-            
-        except FileNotFoundError:
-            print(f"PMS7003 data file '{pms_file}' not found")
-            return None
-        except json.JSONDecodeError:
-            print("Error reading JSON data")
-            return None
-        except Exception as e:
-            print(f"Error calculating AQI: {e}")
-            return None
-    
-    def save_aqi_data(self, aqi_data, filename='aqi_data.json'):
-        """Save AQI calculation results"""
-        try:
-            # Try to read existing data
-            try:
-                with open(filename, 'r') as f:
-                    existing_data = json.load(f)
-            except FileNotFoundError:
-                existing_data = []
-            
-            # Append new data
-            existing_data.append(aqi_data)
-            
-            # Keep only last 100 readings
-            if len(existing_data) > 100:
-                existing_data = existing_data[-100:]
-            
-            # Save back to file
-            with open(filename, 'w') as f:
-                json.dump(existing_data, f, indent=2)
-                
-        except Exception as e:
-            print(f"Error saving AQI data: {e}")
-    
-    def print_aqi_report(self, aqi_data):
-        """Print formatted AQI report"""
-        if not aqi_data:
-            print("No AQI data available")
-            return
-        
-        print("\n" + "="*60)
-        print("           AIR QUALITY INDEX REPORT")
-        print("="*60)
-        print(f"Timestamp: {aqi_data['timestamp']}")
-        print(f"Overall AQI: {aqi_data['overall_aqi']}")
-        print(f"Dominant Pollutant: {aqi_data['dominant_pollutant']}")
-        print(f"Concentration: {aqi_data['dominant_concentration']} μg/m³")
-        
-        category = aqi_data.get('category_info', {})
-        print(f"\nCategory: {category.get('category', 'Unknown')}")
-        print(f"Color Code: {category.get('color', 'Unknown')}")
-        print(f"Description: {category.get('description', 'No description')}")
-        
-        print(f"\nIndividual AQI Values:")
-        for pollutant, aqi_val in aqi_data['individual_aqis'].items():
-            concentration = aqi_data['concentrations'][pollutant]
-            print(f"  {pollutant}: {aqi_val} (concentration: {concentration} μg/m³)")
-        
-        if 'environmental_data' in aqi_data:
-            env = aqi_data['environmental_data']
-            print(f"\nEnvironmental Conditions:")
-            print(f"  Temperature: {env.get('temperature', 'N/A')}°C")
-            print(f"  Humidity: {env.get('humidity', 'N/A')}%")
-            print(f"  Pressure: {env.get('pressure', 'N/A')} hPa")
-        
-        print("="*60)
 
-def main():
-    """Main function to run AQI calculator"""
+def find_arduino_port():
+    ports = serial.tools.list_ports.comports()
+    for port in ports:
+        if "Arduino" in port.description or "CH340" in port.description or "ttyUSB" in port.device:
+            print(f"[✓] Found Arduino on {port.device}")
+            return port.device
+    return None
+
+def parse_pm_values(line):
+    try:
+        # Example input: PM1.0: 14 µg/m3 | PM2.5: 23 µg/m3 | PM10: 27 µg/m3
+        match = re.findall(r"PM1\.0:\s*(\d+)\s*µg/m3\s*\|\s*PM2\.5:\s*(\d+)\s*µg/m3\s*\|\s*PM10:\s*(\d+)\s*µg/m3", line)
+        if match:
+            pm1, pm25, pm10 = match[0]
+            return int(pm1), int(pm25), int(pm10)
+    except:
+        pass
+    return None
+
+def start_logging(port):
     calculator = AQICalculator()
     
-    print("AQI Calculator")
-    print("=" * 30)
-    
-    # Option 1: Calculate from manual input
-    print("\n1. Manual Input")
-    print("2. Calculate from sensor data files")
-    choice = input("Choose option (1 or 2): ").strip()
-    
-    if choice == '1':
-        try:
-            pm25 = float(input("Enter PM2.5 concentration (μg/m³): "))
-            pm10 = float(input("Enter PM10 concentration (μg/m³): "))
-            
-            aqi_result = calculator.calculate_aqi(pm25=pm25, pm10=pm10)
-            if aqi_result:
+    # Initialize existing data from file
+    try:
+        with open("aqi_log.json", "r") as f:
+            existing_data = json.load(f)
+        # Keep only last 100 entries
+        existing_data = existing_data[-100:]
+    except (FileNotFoundError, json.JSONDecodeError):
+        existing_data = []
+
+    try:
+        ser = serial.Serial(port, 9600, timeout=1)
+        print("[✓] Connected to Arduino. Starting log...\n")
+
+        while True:
+            line = ser.readline().decode(errors='ignore').strip()
+            if not line:
+                continue
+
+            parsed = parse_pm_values(line)
+            if parsed:
+                pm1, pm25, pm10 = parsed
+                # Calculate AQI
+                aqi_result = calculator.calculate_aqi(pm25=pm25, pm10=pm10)
+                if not aqi_result:
+                    continue
+
                 category_info = calculator.get_aqi_category(aqi_result['overall_aqi'])
-                aqi_result['category_info'] = category_info
-                calculator.print_aqi_report(aqi_result)
-            
-        except ValueError:
-            print("Invalid input. Please enter numeric values.")
-    
-    elif choice == '2':
-        aqi_result = calculator.calculate_from_files()
-        if aqi_result:
-            calculator.print_aqi_report(aqi_result)
-            calculator.save_aqi_data(aqi_result)
-            print(f"\nAQI data saved to aqi_data.json")
-        else:
-            print("Could not calculate AQI from sensor data files")
-    
-    else:
-        print("Invalid choice")
+                reading = {
+                    'timestamp': datetime.now().isoformat(),
+                    'overall_aqi': aqi_result['overall_aqi'],
+                    'dominant_pollutant': aqi_result['dominant_pollutant'],
+                    'dominant_concentration': aqi_result['dominant_concentration'],
+                    'individual_aqis': aqi_result['individual_aqis'],
+                    'concentrations': {
+                        'PM1.0': pm1,
+                        'PM2.5': pm25,
+                        'PM10': pm10
+                    },
+                    'category_info': category_info
+                }
+
+                # Update data buffer
+                existing_data.append(reading)
+                if len(existing_data) > 100:
+                    existing_data = existing_data[-100:]
+
+                # Write to JSON file
+                try:
+                    with open("aqi_log.json", "w") as f:
+                        json.dump(existing_data, f, indent=2)
+                except Exception as e:
+                    print(f"[!] Error writing to file: {e}")
+
+                # Print status
+                timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(f"{timestamp_str} → PM1.0: {pm1}, PM2.5: {pm25}, PM10: {pm10} → AQI: {reading['overall_aqi']} ({category_info['category']})")
+
+    except serial.SerialException:
+        print("[!] Arduino disconnected.")
+    except KeyboardInterrupt:
+        print("\n[!] Logging stopped by user.")
 
 if __name__ == "__main__":
-    main()
+    print("[…] Waiting for Arduino...")
+    while True:
+        port = find_arduino_port()
+        if port:
+            start_logging(port)
+            break
+        time.sleep(2)
