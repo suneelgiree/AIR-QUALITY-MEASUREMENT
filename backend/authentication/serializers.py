@@ -34,8 +34,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'full_name', 'location', 'latitude', 'longitude', 
-                 'created_at', 'latest_air_quality')
+        fields = (
+            'id',
+            'email',
+            'full_name',
+            'location',
+            'latitude',
+            'longitude',
+            'latest_air_quality'
+        )
 
     def get_latest_air_quality(self, obj):
         latest = obj.air_quality_data.first()
