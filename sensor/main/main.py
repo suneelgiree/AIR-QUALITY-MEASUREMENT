@@ -271,6 +271,32 @@ last_log_time = 0
 LOG_INTERVAL = 600  # 10 minutes in seconds
 
 print("AQI Monitor started - updating LCD every second")
+# UART0 (used to talk to ESP32)
+uart_esp = UART(0, baudrate=9600, tx=Pin(0), rx=Pin(1))  # Pico TX = GP0, RX = GP1
+
+def handle_uart_command():
+    if uart_esp.any():
+        try:
+            command = uart_esp.readline().decode().strip()
+            print("ESP32 command:", command)
+
+            if command == "GET_JSON":
+                with open(AQI_LOG_FILE, "r") as f:
+                    for line in f:
+                        uart_esp.write(line)
+                        time.sleep(0.01)  # throttle to avoid buffer overflow
+                uart_esp.write("\n<END>\n")
+
+            elif command == "GET_CSV":
+                with open(FILENAME, "r") as f:
+                    for line in f:
+                        uart_esp.write(line)
+                        time.sleep(0.01)
+                uart_esp.write("\n<END>\n")
+
+        except Exception as e:
+            uart_esp.write(f"ERROR: {str(e)}\n")
+
 
 while True:
     current_time = time.time()
@@ -297,11 +323,13 @@ while True:
             else:
                 # Just print to console without logging
                 timestamp = time.localtime()
-                timest amp_str = f"{timestamp[0]:04d}-{timestamp[1]:02d}-{timestamp[2]:02d} {timestamp[3]:02d}:{timestamp[4]:02d}:{timestamp[5]:02d}"
+                timestamp_str = f"{timestamp[0]:04d}-{timestamp[1]:02d}-{timestamp[2]:02d} {timestamp[3]:02d}:{timestamp[4]:02d}:{timestamp[5]:02d}"
                 category_info = calculator.get_aqi_category(aqi_result['overall_aqi'])
                 print(f"{timestamp_str} → AQI: {aqi_result['overall_aqi']} ({category_info['category']})")
     else:
         # Show waiting message when no sensor data
         display_waiting_on_lcd()
+    handle_uart_command()
+
     
     time.sleep(1)  # Update every second
