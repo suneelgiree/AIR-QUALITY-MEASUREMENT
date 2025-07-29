@@ -5,8 +5,11 @@
 ![React](https://img.shields.io/badge/React-18.2-blue)
 ![Machine Learning](https://img.shields.io/badge/ML-Enabled-orange)
 ![IoT](https://img.shields.io/badge/IoT-Ready-red)
+![AWS](https://img.shields.io/badge/Cloud-AWS-yellow)
 
-A comprehensive air quality monitoring system that combines real-time sensor data, external API integration, and machine learning predictions to provide accurate and actionable air quality information.
+A comprehensive air quality monitoring system combining real-time sensor data, external API integration, and machine learning predictions to provide actionable air quality information.
+
+---
 
 ## 📋 Table of Contents
 
@@ -14,219 +17,242 @@ A comprehensive air quality monitoring system that combines real-time sensor dat
 - [Features](#features)
 - [System Architecture](#system-architecture)
 - [Technologies Used](#technologies-used)
-- [Installation](#installation)
+- [Installation & Deployment](#installation--deployment)
 - [Usage](#usage)
 - [API Documentation](#api-documentation)
 - [Machine Learning Models](#machine-learning-models)
 - [Contributing](#contributing)
 - [License](#license)
 
+---
+
 ## 🌟 Overview
 
-The Air Quality Measurement System is a full-stack IoT application that monitors, analyzes, and predicts air quality in real-time. It combines data from physical sensors and third-party APIs to provide comprehensive air quality assessments. The system calculates AQI (Air Quality Index) values following EPA standards and uses machine learning to predict future air quality conditions.
+**Air Quality Measurement System** is a full-stack IoT application for monitoring, analyzing, and forecasting air quality. It combines sensor data, weather APIs, and AI models to provide users with real-time and predictive air quality insights, personalized health tips, and historical data visualization.
+
+---
 
 ## ✨ Features
 
 ### 🔍 Air Quality Monitoring
-- Real-time monitoring of air quality parameters (PM2.5, PM10, etc.)
-- AQI calculation based on EPA standards
-- Historical data tracking and visualization
-- Geolocation-based air quality reporting
+- Real-time AQI (Air Quality Index) monitoring (PM2.5, PM10, others)
+- EPA-standard AQI calculation
+- Historical and sensor-based AQI history
+- Geolocation-based reports
 
 ### 🌦️ Weather Integration
 - Current weather conditions
-- Weather forecasts for 7 days
-- Weather parameter tracking (temperature, humidity, pressure)
+- 7-day weather forecast
+- Hourly temperature charts
 
 ### 📊 Data Visualization
-- Interactive charts and graphs for air quality trends
+- Interactive charts (AQI, PM2.5, weather trends)
 - Color-coded AQI indicators
-- Hourly and daily data visualization
+- Hourly/daily data views
 
 ### 🔮 Prediction & Analysis
-- Machine learning models for AQI prediction
-- 24-hour air quality forecasts
-- Weather-AQI relationship analysis
-- Confidence scores for predictions
+- ML-based AQI prediction (SVR, Ridge, Random Forest)
+- 24-hour AQI forecasts
+- Weather-AQI relationship charts
+- Confidence scores on predictions
 
 ### 📱 User Features
-- User accounts and authentication
+- Registration, login, JWT authentication
+- User profile management
 - Location-based personalization
 - Real-time alerts and notifications
-- Responsive design for mobile and desktop
+- Responsive, multilingual UI (English, Nepali, Hindi)
+
+---
 
 ## 🏗️ System Architecture
 
-The system follows a modern three-tier architecture:
+**Three-tier architecture:**
 
 ### Frontend (React)
-- Dashboard for data visualization
-- AQI monitoring interface
-- Weather and AQI forecasting
-- User authentication and profile management
-- Multilingual support (English , Nepali and Hindi) using react-i18next
-- Landing page with Navbar, Home, Services, About Us, and Footer
+- Dashboard, AQI, Forecasting, User Profile, Sensor History
+- Interactive charts, health tips, recommendations
+- Multilingual support (react-i18next)
+- Responsive design (TailwindCSS)
+- API communication via Axios
 
-### Backend (Django)
-- RESTful API endpoints
-- Data processing and storage
-- Authentication and authorization
-- External API integration
+### Backend (Django + DRF)
+- RESTful API endpoints for AQI, weather, sensors, user/profile
+- JWT authentication
+- Data storage, ML model integration
 
 ### Data Collection
-- IoT sensor integration (PMS7003, BME280)
-- External API data sources (OpenWeatherMap)
-- AQI calculation engine
-- Machine learning prediction models
+- IoT sensors: PMS7003, BME280
+- External APIs: OpenWeatherMap for weather
+- AQI calculation and ML prediction engine
+
+---
 
 ## 🛠️ Technologies Used
 
 ### Frontend
-- React.js
+- React.js (Vite)
 - TailwindCSS
 - Lucide React (icons)
-- Axios (HTTP client)
+- Axios
 - React Router
+- i18next (multilingual)
 
 ### Backend
 - Django
 - Django REST Framework
-- NumPy & SciPy
-- Scikit-learn (ML models)
+- NumPy, SciPy
+- Scikit-learn (ML)
 - SQLite/PostgreSQL
 
-### IoT & Data Collection
-- Python
-- PMS7003 sensor integration
-- BME280 sensor integration
-- EPA AQI calculation algorithms
+### IoT & Data
+- Python (sensor integration)
+- PMS7003, BME280 sensors
 
-## 📥 Installation
+### Cloud/Deployment
+- AWS Elastic Beanstalk (backend)
+- AWS S3 + CloudFront (frontend static hosting)
+- AWS RDS (database, optional)
+
+---
+
+## 🚀 Installation & Deployment
 
 ### Prerequisites
 - Python 3.8+
 - Node.js 14+
 - npm 6+
 - Git
+- AWS account (for cloud deployment)
 
-### Backend Setup
+---
+
+### Local Setup
+
+#### **Backend**
 ```bash
-# Clone the repository
 git clone https://github.com/suneelgiree/AIR-QUALITY-MEASUREMENT.git
-cd AIR-QUALITY-MEASUREMENT
+cd AIR-QUALITY-MEASUREMENT/backend
 
-# Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Install backend dependencies
-cd backend
 pip install -r requirements.txt
-
-# Run migrations
 python manage.py makemigrations
 python manage.py migrate
-
-# Create superuser (optional)
-python manage.py createsuperuser
-
-# Start the Django server
+python manage.py createsuperuser  # optional
 python manage.py runserver
 ```
 
-### Frontend Setup
+#### **Frontend**
 ```bash
-# Navigate to frontend directory
 cd ../frontend
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm start
 ```
 
-### Sensor Setup (Optional)
+#### **Sensor Simulation (Optional)**
 ```bash
-# Navigate to simulation directory
 cd ../simulation
-
-# Install requirements
 pip install -r requirements.txt
-
-# Run sensor simulation (if no physical sensors)
 python simulate_sensors.py
 ```
+
+---
+
+### AWS Cloud Deployment
+
+#### **Backend (Elastic Beanstalk)**
+1. Prepare `requirements.txt`, `Procfile`, `runtime.txt`.
+2. Initialize EB:
+   ```bash
+   eb init -p python-3.11 air-quality-app
+   eb create air-quality-env
+   eb open
+   ```
+3. Set environment variables (SECRET_KEY, API keys) in AWS EB dashboard.
+4. (Optional) Connect RDS PostgreSQL database.
+5. Use S3 for static/media files (`django-storages`).
+
+#### **Frontend (S3 + CloudFront)**
+1. Build frontend:
+   ```bash
+   npm run build  # or vite build
+   ```
+2. Upload `/dist` (or `/build`) to S3 bucket (static website hosting enabled).
+3. Set public read policy for S3 objects.
+4. (Optional) Configure CloudFront for CDN and HTTPS.
+5. Set API URL in `.env` to Elastic Beanstalk backend endpoint.
+
+---
 
 ## 📝 Usage
 
 ### Dashboard
-The main dashboard provides an overview of current air quality, recent trends, and predictions:
-1. Navigate to the dashboard after login
-2. View current AQI and weather conditions
-3. Check historical data trends
-4. See predictions for upcoming air quality
+- Login > Dashboard shows current AQI, weather, trends, health tips
 
-### AQI Monitoring
-The AQI page provides detailed air quality information:
-1. Current AQI value and category
-2. PM2.5 and PM10 concentrations
-3. Health impact information
-4. Historical AQI data chart
+### AQI Page
+- Detailed AQI value, PM2.5, PM10, health impacts, historical chart, sensor history
 
 ### Forecasting
-The forecasting page combines weather and AQI predictions:
-1. 7-day weather forecast
-2. Temperature patterns throughout the day
-3. AQI predictions for upcoming days
-4. Weather-AQI relationship information
+- 7-day weather forecast, hourly temps, AQI predictions (ML models), weather-AQI relations
+
+### Profile & Sensor History
+- Manage user profile
+- View sensor-based AQI history
+
+---
 
 ## 📚 API Documentation
 
 ### Authentication Endpoints
-- `POST /api/auth/login/` - User login
-- `POST /api/auth/register/` - User registration
-- `POST /api/auth/token/refresh/` - Refresh authentication token
+- `POST /api/auth/login/` — Login
+- `POST /api/auth/register/` — Register
+- `POST /api/auth/token/refresh/` — Refresh JWT token
+- `GET /api/auth/profile/` — User profile
 
 ### Air Quality Endpoints
-- `GET /api/air-quality/update/` - Update air quality data from external API
-- `GET /api/air-quality/history/` - Get air quality history
-- `GET /api/air-quality/sensor/update/` - Update air quality using sensor data
-- `GET /api/air-quality/sensor/history/` - Get sensor-based air quality history
-- `GET /api/air-quality/dashboard/` - Get comprehensive dashboard data
+- `GET /api/air-quality/update/` — Update AQI from external API
+- `GET /api/air-quality/history/` — AQI history
+- `GET /api/air-quality/sensor/update/` — Update AQI from sensors (ML predicted AQI included)
+- `GET /api/air-quality/sensor/history/` — Sensor AQI history
+- `GET /api/air-quality/dashboard/` — Dashboard summary
 
 ### Weather Endpoints
-- `GET /api/weather/current/` - Get current weather data
-- `GET /api/weather/forecast/` - Get weather forecast
-
-## 🧠 Machine Learning Models
-
-The system includes several machine learning models for AQI prediction:
-
-### Ridge Regression Model
-- Features: Current AQI, PM2.5, PM10, temperature, humidity, pressure
-- Target: AQI 24 hours ahead
-- Performance: RMSE ~ 5-8 AQI points
-
-### Random Forest Model
-- Features: Current AQI, PM2.5, PM10, temperature, humidity, pressure, time of day, day of week
-- Target: AQI 24 hours ahead
-- Performance: RMSE ~ 4-7 AQI points
-
-## 👥 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- `GET /api/weather/current/` — Current weather
+- `GET /api/weather/forecast/` — Weather forecast (7 days)
 
 ---
 
-Developed by Suneel Giree, Slok Regmi, Laxman Khatri, and Prajil Baral | © 2023-2025 AIR-QUALITY-MEASUREMENT
+## 🧠 Machine Learning Models
+
+- **SVR (Support Vector Regression):**  
+  Predicts AQI for next 24 hours using current AQI, weather, and sensor data.
+- **Ridge Regression, Random Forest:**  
+  Used for comparative prediction and analysis.
+- **Model workflow:**  
+  Trained offline, loaded in backend, used in `/api/air-quality/sensor/update/`.
+- **Prediction fields:**  
+  `predicted_aqi_24h`, `model_used`, `confidence`
+
+---
+
+## 👥 Contributing
+
+We welcome contributions!
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
+
+---
+
+Developed by Suneel Giree, Slok Regmi, Laxman Khatri, Prajil Baral | © 2023-2025 AIR-QUALITY-MEASUREMENT
