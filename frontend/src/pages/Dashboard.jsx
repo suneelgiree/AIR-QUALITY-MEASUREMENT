@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, User, LogOut, Search, MapPin, RefreshCw, AlertCircle } from 'lucide-react';
+import { Bell, User, LogOut, Search, RefreshCw, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { airQualityService } from '../services/api';
 import AirQualityCard from '../components/AirQualityCard';
 
 const Dashboard = () => {
-  // UI state
   const [accountMenu, setAccountMenu] = useState(false);
   const navigate = useNavigate();
 
-  // Air quality state
   const [airQualityData, setAirQualityData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -18,29 +16,22 @@ const Dashboard = () => {
   const isLoggedIn = Boolean(localStorage.getItem('access_token'));
 
   useEffect(() => {
-    // Get user info from localStorage
-    const storedUser = localStorage.getItem('userInfo');
+    const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUserInfo(JSON.parse(storedUser));
     }
 
-    // Load initial data
     loadAirQualityData();
   }, []);
 
   const loadAirQualityData = async () => {
     setLoading(true);
     setError(null);
-
     try {
-      // First try to get history, which should include latest reading
       const historyData = await airQualityService.getHistory();
-
       if (historyData && historyData.length > 0) {
-        // Use the most recent record
         setAirQualityData(historyData[0]);
       } else {
-        // If no history, update air quality
         const response = await airQualityService.updateAirQuality();
         setAirQualityData(response.data);
       }
@@ -58,7 +49,6 @@ const Dashboard = () => {
   const updateAirQuality = async () => {
     setLoading(true);
     setError(null);
-
     try {
       const response = await airQualityService.updateAirQuality();
       setAirQualityData(response.data);
@@ -76,17 +66,16 @@ const Dashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
-    localStorage.removeItem('userInfo');
+    localStorage.removeItem('user');
     navigate('/');
   };
 
-  const accountName = userInfo?.full_name || "User";
+  const accountName = userInfo?.full_name || 'User';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-green-50 to-green-200">
       {/* Navbar */}
       <nav className="bg-white/80 shadow flex items-center justify-between px-6 py-4">
-        {/* Left: Logo & Links */}
         <div className="flex items-center space-x-6">
           <Link
             to={isLoggedIn ? "/dashboard" : "/"}
@@ -97,7 +86,7 @@ const Dashboard = () => {
           <Link to="/aqi" className="text-blue-800 hover:text-green-600 font-medium transition-colors">AQI</Link>
           <Link to="/forecasting" className="text-blue-800 hover:text-green-600 font-medium transition-colors">Forecasting</Link>
         </div>
-        {/* Center: Search */}
+
         <div className="flex items-center bg-blue-50 rounded-lg px-3 py-1 shadow-inner mx-6">
           <Search className="w-5 h-5 text-blue-400 mr-2" />
           <input
@@ -106,7 +95,7 @@ const Dashboard = () => {
             className="bg-transparent outline-none text-blue-900"
           />
         </div>
-        {/* Right: Notification & Account */}
+
         <div className="flex items-center space-x-6 relative">
           <button className="p-2 rounded-full hover:bg-blue-100 transition-colors" title="Notifications">
             <Bell className="w-6 h-6 text-blue-800" />
@@ -135,15 +124,7 @@ const Dashboard = () => {
 
       {/* Dashboard Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* User Location */}
-        {userInfo?.location && (
-          <div className="mb-6 flex items-center text-blue-800">
-            <MapPin className="w-5 h-5 mr-2" />
-            <span className="font-medium">{userInfo.location}</span>
-          </div>
-        )}
-
-        {/* Welcome Banner */}
+        {/* Location display removed */}
         <div className="bg-gradient-to-r from-blue-200 via-green-100 to-green-200 rounded-2xl shadow p-6 mb-8">
           <h1 className="text-3xl font-bold text-blue-900">Welcome to your Dashboard!</h1>
           <p className="text-blue-700 mt-2">
@@ -151,9 +132,8 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-          {/* Left Column: Quick Stats */}
+          {/* Left Column */}
           <div className="lg:col-span-3">
             <div className="bg-white/90 rounded-2xl shadow p-6 hover:shadow-xl transition-all h-full">
               <div className="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
@@ -174,17 +154,12 @@ const Dashboard = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-blue-700">AQI</span>
-                    <span
-                      className={`font-bold ${
-                        airQualityData.aqi <= 50
-                          ? 'text-green-600'
-                          : airQualityData.aqi <= 100
-                          ? 'text-yellow-600'
-                          : airQualityData.aqi <= 150
-                          ? 'text-orange-600'
-                          : 'text-red-600'
-                      }`}
-                    >
+                    <span className={`font-bold ${
+                      airQualityData.aqi <= 50 ? 'text-green-600' :
+                      airQualityData.aqi <= 100 ? 'text-yellow-600' :
+                      airQualityData.aqi <= 150 ? 'text-orange-600' :
+                      'text-red-600'
+                    }`}>
                       {airQualityData.aqi}
                     </span>
                   </div>
@@ -218,45 +193,27 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Center: Air Quality Card and Chart */}
+          {/* Center Column */}
           <div className="lg:col-span-6 space-y-6">
-            {/* Air Quality Card */}
-            <AirQualityCard
-              data={airQualityData}
-              loading={loading}
-              error={error}
-            />
-
-            {/* AQI Chart */}
+            <AirQualityCard data={airQualityData} loading={loading} error={error} />
             {airQualityData && (
               <div className="bg-white/90 rounded-2xl shadow p-6">
                 <div className="font-semibold text-blue-800 mb-4">Today's AQI Levels</div>
                 <div className="flex items-end gap-2 h-40">
-                  {[
-                    airQualityData.aqi - 20,
-                    airQualityData.aqi - 10,
-                    airQualityData.aqi,
-                    airQualityData.aqi + 5,
-                    airQualityData.aqi + 10,
-                    airQualityData.aqi,
-                    airQualityData.aqi - 5,
-                  ].map((val, i) => (
+                  {[airQualityData.aqi - 20, airQualityData.aqi - 10, airQualityData.aqi, airQualityData.aqi + 5, airQualityData.aqi + 10, airQualityData.aqi, airQualityData.aqi - 5].map((val, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center group">
                       <div
                         className={`w-4 rounded-t transition-all group-hover:scale-110 group-hover:shadow-lg ${
-                          val <= 50
-                            ? 'bg-green-400'
-                            : val <= 100
-                            ? 'bg-yellow-400'
-                            : val <= 150
-                            ? 'bg-orange-400'
-                            : 'bg-red-500'
+                          val <= 50 ? 'bg-green-400' :
+                          val <= 100 ? 'bg-yellow-400' :
+                          val <= 150 ? 'bg-orange-400' :
+                          'bg-red-500'
                         }`}
                         style={{ height: `${Math.max(20, val / 2)}px` }}
                         title={`AQI: ${val}`}
                       ></div>
                       <span className="text-[10px] text-gray-500 mt-1">
-                        {(new Date().getHours() + i - 3) % 24}:00
+                        {(new Date().getHours() + i - 3 + 24) % 24}:00
                       </span>
                     </div>
                   ))}
@@ -265,12 +222,10 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Right: Recommendations and Health Tips */}
+          {/* Right Column */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Recommendations */}
             <div className="bg-white/90 rounded-2xl shadow p-6">
               <h3 className="text-lg font-semibold text-blue-800 mb-4">Recommendations</h3>
-
               {loading ? (
                 <div className="animate-pulse">
                   <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
@@ -282,54 +237,22 @@ const Dashboard = () => {
               ) : airQualityData ? (
                 <div className="space-y-4">
                   {airQualityData.aqi <= 50 && (
-                    <div className="flex items-start">
-                      <div className="bg-green-100 p-1 rounded-full mr-2 mt-1">
-                        <AlertCircle className="w-4 h-4 text-green-500" />
-                      </div>
-                      <p className="text-gray-700 text-sm">
-                        Air quality is good. It's a great day for outdoor activities!
-                      </p>
-                    </div>
+                    <Tip color="green" text="Air quality is good. It's a great day for outdoor activities!" />
                   )}
-
                   {airQualityData.aqi > 50 && airQualityData.aqi <= 100 && (
-                    <div className="flex items-start">
-                      <div className="bg-yellow-100 p-1 rounded-full mr-2 mt-1">
-                        <AlertCircle className="w-4 h-4 text-yellow-500" />
-                      </div>
-                      <p className="text-gray-700 text-sm">
-                        Air quality is moderate. Sensitive individuals should consider limiting prolonged outdoor exertion.
-                      </p>
-                    </div>
+                    <Tip color="yellow" text="Air quality is moderate. Sensitive individuals should consider limiting prolonged outdoor exertion." />
                   )}
-
                   {airQualityData.aqi > 100 && airQualityData.aqi <= 150 && (
-                    <div className="flex items-start">
-                      <div className="bg-orange-100 p-1 rounded-full mr-2 mt-1">
-                        <AlertCircle className="w-4 h-4 text-orange-500" />
-                      </div>
-                      <p className="text-gray-700 text-sm">
-                        Air quality is unhealthy for sensitive groups. Children and older adults should limit outdoor exertion.
-                      </p>
-                    </div>
+                    <Tip color="orange" text="Air quality is unhealthy for sensitive groups. Children and older adults should limit outdoor exertion." />
                   )}
-
                   {airQualityData.aqi > 150 && (
-                    <div className="flex items-start">
-                      <div className="bg-red-100 p-1 rounded-full mr-2 mt-1">
-                        <AlertCircle className="w-4 h-4 text-red-500" />
-                      </div>
-                      <p className="text-gray-700 text-sm">
-                        Air quality is unhealthy. Reduce time spent outdoors and consider wearing a mask when outside.
-                      </p>
-                    </div>
+                    <Tip color="red" text="Air quality is unhealthy. Reduce time spent outdoors and consider wearing a mask when outside." />
                   )}
                 </div>
               ) : (
                 <p className="text-gray-500">No recommendations available</p>
               )}
 
-              {/* Quick Links */}
               <div className="flex flex-col gap-3 mt-6">
                 <Link to="/aqi" className="bg-blue-100 hover:bg-blue-200 rounded-xl px-4 py-2 shadow text-blue-900 font-medium text-center transition-all">
                   View AQI Details
@@ -340,7 +263,6 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Health Tips */}
             <div className="bg-white/90 rounded-2xl shadow p-6">
               <h3 className="text-lg font-semibold text-blue-800 mb-4">Health Tips</h3>
               <div className="space-y-3 text-sm text-gray-600">
@@ -357,5 +279,14 @@ const Dashboard = () => {
     </div>
   );
 };
+
+const Tip = ({ color, text }) => (
+  <div className="flex items-start">
+    <div className={`bg-${color}-100 p-1 rounded-full mr-2 mt-1`}>
+      <AlertCircle className={`w-4 h-4 text-${color}-500`} />
+    </div>
+    <p className="text-gray-700 text-sm">{text}</p>
+  </div>
+);
 
 export default Dashboard;

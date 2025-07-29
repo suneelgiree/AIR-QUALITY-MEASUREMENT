@@ -14,10 +14,19 @@ const Forecasting = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedDay, setSelectedDay] = useState(0);
-  
+
   const navigate = useNavigate();
-  // Use the current username or default to the one provided
-  const accountName = localStorage.getItem('userName') || "suneelgiree"; 
+
+  // --- User info for navbar ---
+  const [userInfo, setUserInfo] = useState(null);
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUserInfo(JSON.parse(storedUser));
+    }
+  }, []);
+  const accountName = userInfo?.full_name || "User";
+  // --- End user info ---
 
   // This function generates mock weather data when API calls fail
   const generateMockWeatherData = () => {
@@ -37,16 +46,16 @@ const Forecasting = () => {
       };
     });
   };
-  
+
   // This function generates hourly temperature data
   const generateHourlyChartData = (baseTemp) => {
     const hourlyData = [];
     const currentHour = new Date().getHours();
-    
+
     for (let i = 0; i < 24; i++) {
       const hour = (currentHour + i) % 24;
       let tempVariation = 0;
-      
+
       if (hour >= 0 && hour < 6) {
         tempVariation = -2 - Math.random() * 2;
       } else if (hour >= 6 && hour < 12) {
@@ -56,13 +65,13 @@ const Forecasting = () => {
       } else {
         tempVariation = 1 - ((hour - 18) / 6) * 3 + (Math.random() * 1 - 0.5);
       }
-      
+
       hourlyData.push({
         hour: `${hour}:00`,
         temp: Math.round((baseTemp + tempVariation) * 10) / 10
       });
     }
-    
+
     return hourlyData;
   };
 
@@ -70,7 +79,7 @@ const Forecasting = () => {
   const fetchForecastData = async (locationName) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Weather forecast
       let weatherData = [];
@@ -78,31 +87,27 @@ const Forecasting = () => {
         const weatherResponse = await axios.get(`/api/weather/forecast/?location=${locationName}`);
         weatherData = weatherResponse.data;
       } catch (err) {
-        console.log("Using mock weather data instead of API");
         weatherData = generateMockWeatherData();
       }
-      
+
       // Current weather
       let currentWeatherData = null;
       try {
         const currentWeatherResponse = await axios.get(`/api/weather/current/?location=${locationName}`);
         currentWeatherData = currentWeatherResponse.data;
       } catch (err) {
-        console.log("Using mock current weather instead of API");
-        currentWeatherData = { 
+        currentWeatherData = {
           main: { temp: 25, humidity: 50, pressure: 1013 },
           wind: { speed: 10 }
         };
       }
-      
+
       // AQI data with predictions
       let aqiData = { predictions: [] };
       try {
-        // Try to get authentication token (any of the possible keys)
-        const token = localStorage.getItem('token') || 
-                    localStorage.getItem('authToken') || 
-                    localStorage.getItem('isAuthenticated');
-                    
+        const token = localStorage.getItem('token') ||
+          localStorage.getItem('authToken') ||
+          localStorage.getItem('isAuthenticated');
         if (token) {
           const aqiResponse = await axios.get('/api/air-quality/sensor/update/', {
             headers: { Authorization: `Token ${token}` }
@@ -110,15 +115,14 @@ const Forecasting = () => {
           aqiData = aqiResponse.data;
         }
       } catch (err) {
-        console.log("Using mock AQI data instead of API");
-        aqiData = { 
+        aqiData = {
           predictions: [
             { predicted_aqi_24h: 45, model_used: 'mock_model.pkl' },
             { predicted_aqi_24h: 48, model_used: 'alternate_model.pkl' }
           ]
         };
       }
-      
+
       // Format weather forecast data
       const formattedWeatherForecast = weatherData.map(day => ({
         temp: Math.round(day.temperature),
@@ -131,32 +135,29 @@ const Forecasting = () => {
         pressure: day.pressure,
         confidence: day.confidence
       }));
-      
+
       // Format AQI forecast data
       let formattedAqiForecast = [];
       if (aqiData && aqiData.predictions && aqiData.predictions.length > 0) {
         formattedAqiForecast = aqiData.predictions.map((prediction, index) => ({
           aqi: Math.round(prediction.predicted_aqi_24h),
           model: prediction.model_used,
-          date: new Date(Date.now() + (24 + index*24)*60*60*1000).toLocaleDateString('en-US', { day: '2-digit', month: 'long' })
+          date: new Date(Date.now() + (24 + index * 24) * 60 * 60 * 1000).toLocaleDateString('en-US', { day: '2-digit', month: 'long' })
         }));
       }
-      
+
       // Generate hourly chart data
       const baseTemp = currentWeatherData?.main?.temp || 25;
       const hourlyData = generateHourlyChartData(baseTemp);
-      
+
       // Update state with formatted data
       setWeatherForecast(formattedWeatherForecast);
       setAqiForecast(formattedAqiForecast);
       setCurrentWeather(currentWeatherData);
       setChartData(hourlyData);
-      
+
     } catch (error) {
-      console.error("Error in forecast data processing:", error);
       setError("Could not load complete forecast data. Some information may be estimated.");
-      
-      // Set fallback data
       if (weatherForecast.length === 0) {
         const mockData = generateMockWeatherData();
         setWeatherForecast(mockData.map(day => ({
@@ -171,7 +172,6 @@ const Forecasting = () => {
           confidence: day.confidence
         })));
       }
-      
       if (chartData.length === 0) {
         setChartData(generateHourlyChartData(25));
       }
@@ -179,13 +179,12 @@ const Forecasting = () => {
       setIsLoading(false);
     }
   };
-  
+
   // Initial data loading - load data when component mounts
   useEffect(() => {
     fetchForecastData(location);
-    // No redirect logic here - just load data
   }, []);
-  
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -193,20 +192,19 @@ const Forecasting = () => {
       fetchForecastData(searchQuery);
     }
   };
-  
+
   const handleDaySelect = (index) => {
     setSelectedDay(index);
   };
-  
+
   const handleLogout = () => {
-    // Clear all possible auth tokens
     localStorage.removeItem('token');
     localStorage.removeItem('authToken');
     localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userName');
+    localStorage.removeItem('user');
     navigate('/');
   };
-  
+
   // Get AQI color based on value
   const getAqiColor = (aqi) => {
     if (aqi <= 50) return 'bg-green-500';
@@ -216,7 +214,7 @@ const Forecasting = () => {
     if (aqi <= 300) return 'bg-purple-600';
     return 'bg-red-900';
   };
-  
+
   // Get AQI category text
   const getAqiCategory = (aqi) => {
     if (aqi <= 50) return 'Good';
@@ -276,14 +274,14 @@ const Forecasting = () => {
           </div>
         </div>
       </nav>
-      
+
       {/* Loading State */}
       {isLoading && (
         <div className="flex justify-center items-center py-10">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       )}
-      
+
       {/* Error State */}
       {error && (
         <div className="flex justify-center items-center py-4">
@@ -293,7 +291,7 @@ const Forecasting = () => {
           </div>
         </div>
       )}
-      
+
       {/* Main Forecasting Content - Only show when we have data */}
       {weatherForecast.length > 0 && (
         <div className="flex justify-center items-start py-4">
@@ -328,14 +326,14 @@ const Forecasting = () => {
                       </div>
                     </div>
                   </div>
-                  <button 
+                  <button
                     className="mt-4 w-full bg-gradient-to-r from-blue-400 to-green-600 text-white rounded-full py-1 font-semibold shadow hover:from-blue-500 hover:to-green-700 transition hover:scale-105"
                     onClick={() => handleDaySelect(0)}
                   >
                     Show Today's Forecast
                   </button>
                 </div>
-                
+
                 {/* 7 Days Forecast */}
                 <div className="bg-blue-100 rounded-2xl shadow p-4 hover:shadow-lg hover:-translate-y-1 transition-all">
                   <div className="font-semibold text-blue-800 mb-3">7 Days Forecast</div>
@@ -357,7 +355,7 @@ const Forecasting = () => {
                     ))}
                   </div>
                 </div>
-                
+
                 {/* AQI Forecast */}
                 {aqiForecast.length > 0 && (
                   <div className="bg-blue-100 rounded-2xl shadow p-4 mt-6 hover:shadow-lg hover:-translate-y-1 transition-all">
@@ -385,7 +383,7 @@ const Forecasting = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Center: Forecast Card */}
               <div className="flex-1 flex flex-col gap-6">
                 {/* Forecast Info Card */}
@@ -398,7 +396,7 @@ const Forecasting = () => {
                       {weatherForecast[selectedDay]?.temp}°C
                     </div>
                     <div className="text-xs text-gray-600 flex items-center mt-1">
-                      <Droplets className="w-3 h-3 mr-1" /> 
+                      <Droplets className="w-3 h-3 mr-1" />
                       Rain: {weatherForecast[selectedDay]?.rain}%
                     </div>
                     <div className="text-xs text-gray-600 flex items-center">
@@ -406,7 +404,7 @@ const Forecasting = () => {
                       Wind: {weatherForecast[selectedDay]?.wind}km/h
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col items-center justify-center mx-8">
                     <div className="text-gray-700 text-sm mb-1">Weather</div>
                     <span className="bg-blue-400 text-white px-3 py-1 rounded font-bold text-xs hover:bg-blue-500 transition">
@@ -423,7 +421,7 @@ const Forecasting = () => {
                       <span>{weatherForecast[selectedDay]?.temp + 5}°C</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex-1 flex flex-col items-end justify-between h-full">
                     <div className="text-right">
                       <div className="font-semibold text-blue-900">{location}</div>
@@ -440,7 +438,7 @@ const Forecasting = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Temperature Chart */}
                 <div className="bg-blue-100 rounded-2xl shadow p-6 mt-2 hover:shadow-lg hover:-translate-y-1 transition-all">
                   <div className="font-semibold text-blue-800 mb-2">
@@ -464,12 +462,12 @@ const Forecasting = () => {
                     ))}
                   </div>
                 </div>
-                
+
                 {/* AQI and Weather Combined View */}
                 {aqiForecast.length > 0 && (
                   <div className="bg-blue-100 rounded-2xl shadow p-6 mt-2 hover:shadow-lg hover:-translate-y-1 transition-all">
                     <div className="font-semibold text-blue-800 mb-4">Weather & Air Quality Relationship</div>
-                    
+
                     <div className="flex space-x-6">
                       <div className="flex-1 bg-white p-4 rounded-xl shadow">
                         <div className="text-sm text-blue-900 font-medium mb-2">Temperature Impact on AQI</div>
@@ -482,7 +480,7 @@ const Forecasting = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex-1 bg-white p-4 rounded-xl shadow">
                         <div className="text-sm text-blue-900 font-medium mb-2">Humidity Impact on AQI</div>
                         <div className="flex items-center">
@@ -495,7 +493,7 @@ const Forecasting = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="mt-4 bg-white p-4 rounded-xl shadow">
                       <div className="text-sm text-blue-900 font-medium mb-2">Predicted AQI: {aqiForecast[0]?.aqi || 'N/A'}</div>
                       <div className={`h-8 rounded-md overflow-hidden flex ${getAqiColor(aqiForecast[0]?.aqi)}`}>

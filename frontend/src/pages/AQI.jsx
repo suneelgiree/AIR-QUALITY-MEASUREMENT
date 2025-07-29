@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, User, LogOut, Search, Info, RefreshCw } from 'lucide-react';
+import { Bell, User, LogOut, Search, RefreshCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { airQualityService } from '../services/api';
-import AirQualityCard from '../components/AirQualityCard';
-import AirQualityHistory from '../components/AirQualityHistory';
 
 const AQI = () => {
   // UI state
   const [accountMenu, setAccountMenu] = useState(false);
   const navigate = useNavigate();
-  
+
   // Data state
   const [airQualityData, setAirQualityData] = useState(null);
   const [historyData, setHistoryData] = useState([]);
@@ -20,8 +18,8 @@ const AQI = () => {
   const [userInfo, setUserInfo] = useState(null);
 
   useEffect(() => {
-    // Get user info from localStorage
-    const storedUser = localStorage.getItem('userInfo');
+    // Get user info from localStorage (same as Dashboard)
+    const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUserInfo(JSON.parse(storedUser));
     }
@@ -29,15 +27,15 @@ const AQI = () => {
     fetchAirQualityData();
     fetchHistoryData();
   }, []);
-  
+
   const fetchAirQualityData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // First check if we have history data
       const history = await airQualityService.getHistory();
-      
+
       if (history && history.length > 0) {
         // Use the most recent record
         setAirQualityData(history[0]);
@@ -53,11 +51,11 @@ const AQI = () => {
       setLoading(false);
     }
   };
-  
+
   const fetchHistoryData = async () => {
     setHistoryLoading(true);
     setHistoryError(null);
-    
+
     try {
       const history = await airQualityService.getHistory();
       setHistoryData(history);
@@ -68,15 +66,15 @@ const AQI = () => {
       setHistoryLoading(false);
     }
   };
-  
+
   const refreshData = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await airQualityService.updateAirQuality();
       setAirQualityData(response.data);
-      
+
       // Refresh history data too
       fetchHistoryData();
     } catch (err) {
@@ -86,11 +84,11 @@ const AQI = () => {
       setLoading(false);
     }
   };
-  
+
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
-    localStorage.removeItem('userInfo');
+    localStorage.removeItem('user');
     navigate('/login');
   };
 
@@ -105,7 +103,6 @@ const AQI = () => {
 
   const getChartData = () => {
     if (!historyData || historyData.length === 0) return [];
-    
     // Convert history data to a format suitable for the chart
     return historyData.slice(0, 24).map(item => item.aqi).reverse();
   };

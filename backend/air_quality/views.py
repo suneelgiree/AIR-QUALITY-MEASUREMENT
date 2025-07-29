@@ -37,17 +37,13 @@ def update_air_quality(request):
 
     # Add prediction capability to existing view
     try:
-        aqi_data = {
-            'aqi': air_quality['aqi'],
-            'pm25': air_quality['pm25'],
-            'pm10': air_quality['pm10'],
-        }
-        weather = WeatherService.get_weather_data(user.latitude, user.longitude)
-        if weather:
-            aqi_data['temperature'] = weather['main'].get('temp')
-            aqi_data['humidity'] = weather['main'].get('humidity')
-            aqi_data['pressure'] = weather['main'].get('pressure')
-        prediction = PredictionService.predict_aqi(aqi_data)
+        # Get previous AQI for user if available
+        previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
+        previous_aqi = previous_record.aqi if previous_record else 0
+
+        # Prepare full feature set for prediction
+        features = PredictionService.fetch_full_feature_set(user.latitude, user.longitude, previous_aqi=previous_aqi)
+        prediction = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl')
         air_quality['prediction'] = prediction
     except Exception as e:
         logger.error(f"Prediction error: {str(e)}")
@@ -58,6 +54,7 @@ def update_air_quality(request):
         'data': air_quality
     })
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def air_quality_history(request):
@@ -65,6 +62,7 @@ def air_quality_history(request):
     history = AirQualityData.objects.filter(user=request.user).order_by('-timestamp')[:30]
     serializer = AirQualityDataSerializer(history, many=True)
     return Response(serializer.data)
+
 
 class AirQualityUpdateView(APIView):
     permission_classes = [IsAuthenticated]
@@ -74,9 +72,9 @@ class AirQualityUpdateView(APIView):
         try:
             use_api = request.data.get('use_api', False)
             use_real_sensor = request.data.get('use_real_sensor', False)
+            user = request.user
 
             if use_api:
-                user = request.user
                 if not user.latitude or not user.longitude:
                     return Response({'error': 'User location not available'}, status=status.HTTP_400_BAD_REQUEST)
                 air_quality = WeatherService.get_air_quality_data(user.latitude, user.longitude)
@@ -125,20 +123,23 @@ class AirQualityUpdateView(APIView):
                 category=aqi_data['category'] if 'category' in aqi_data else 'Unknown'
             )
 
-            prediction_models = PredictionService.get_available_models()
-            if not prediction_models:
-                prediction_models = ['ridge_model.pkl', 'random_forest_model.pkl']
+            # Only use SVR model for prediction
+            previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
+            previous_aqi = previous_record.aqi if previous_record else 0
+            lat = user.latitude if hasattr(user, 'latitude') else None
+            lon = user.longitude if hasattr(user, 'longitude') else None
+            features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=previous_aqi)
+
             predictions = []
-            for model_name in prediction_models[:2]:
-                prediction = PredictionService.predict_aqi(aqi_data, model_name=model_name)
-                if 'error' not in prediction:
-                    AQIPrediction.objects.create(
-                        air_quality_record=record,
-                        hours_ahead=24,
-                        predicted_aqi=prediction['predicted_aqi_24h'],
-                        model_used=model_name
-                    )
-                predictions.append(prediction)
+            prediction = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl')
+            if 'error' not in prediction:
+                AQIPrediction.objects.create(
+                    air_quality_record=record,
+                    hours_ahead=24,
+                    predicted_aqi=prediction['predicted_aqi_24h'],
+                    model_used="svr_model.pkl"
+                )
+            predictions.append(prediction)
 
             response_data = {
                 **aqi_data,
@@ -155,6 +156,7 @@ class AirQualityUpdateView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
 class AirQualityHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -170,6 +172,7 @@ class AirQualityHistoryView(APIView):
                 {"error": "Failed to fetch air quality history", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
 
 class AirQualityDashboardView(APIView):
     permission_classes = [IsAuthenticated]

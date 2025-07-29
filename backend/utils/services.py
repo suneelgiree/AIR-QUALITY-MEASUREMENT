@@ -80,6 +80,41 @@ class WeatherService:
             print(f"Error fetching weather data: {e}")
         return None
 
+    @staticmethod
+    def get_additional_weather_features(lat, lon):
+        """
+        Fetch additional weather features from Open-Meteo or other APIs.
+        This is a stub. You must implement actual calls if you want more features.
+        """
+        # Example request (Open-Meteo, Tomorrow.io, etc.) - customize as needed.
+        # For now, return dummy values.
+        return {
+            'dew_point_2m (°C)': 0,
+            'apparent_temperature (°C)': 0,
+            'precipitation (mm)': 0,
+            'rain (mm)': 0,
+            'snowfall (cm)': 0,
+            'snow_depth (m)': 0,
+            'weather_code (wmo code)': 0,
+            'surface_pressure (hPa)': 0,
+            'cloud_cover (%)': 0,
+            'cloud_cover_low (%)': 0,
+            'cloud_cover_mid (%)': 0,
+            'cloud_cover_high (%)': 0,
+            'et0_fao_evapotranspiration (mm)': 0,
+            'vapour_pressure_deficit (kPa)': 0,
+            'wind_speed_100m (km/h)': 0,
+            'wind_direction_100m (°)': 0,
+            'soil_temperature_0_to_7cm (°C)': 0,
+            'soil_temperature_7_to_28cm (°C)': 0,
+            'soil_temperature_28_to_100cm (°C)': 0,
+            'soil_temperature_100_to_255cm (°C)': 0,
+            'soil_moisture_0_to_7cm (m³/m³)': 0,
+            'soil_moisture_7_to_28cm (m³/m³)': 0,
+            'soil_moisture_28_to_100cm (m³/m³)': 0,
+            'soil_moisture_100_to_255cm (m³/m³)': 0,
+        }
+
 class WeatherPredictionModel:
     @staticmethod
     def predict_weather(current_weather, days_ahead):
@@ -269,24 +304,78 @@ class PredictionService:
             if file.name.endswith('_model.pkl'):
                 models.append(file.name)
         return models
-    
+
     @staticmethod
-    def predict_aqi(aqi_data, model_name='ridge_model.pkl'):
+    def fetch_full_feature_set(lat, lon, previous_aqi=0):
+        """
+        Fetch and compile all 31 features for AQI prediction.
+        Uses OpenWeatherMap for basic features and a stub for additional features.
+        """
+        features = {
+            'temperature_2m (°C)': 0, 'relative_humidity_2m (%)': 0, 'dew_point_2m (°C)': 0,
+            'apparent_temperature (°C)': 0, 'precipitation (mm)': 0, 'rain (mm)': 0,
+            'snowfall (cm)': 0, 'snow_depth (m)': 0, 'weather_code (wmo code)': 0,
+            'pressure_msl (hPa)': 0, 'surface_pressure (hPa)': 0, 'cloud_cover (%)': 0,
+            'cloud_cover_low (%)': 0, 'cloud_cover_mid (%)': 0, 'cloud_cover_high (%)': 0,
+            'et0_fao_evapotranspiration (mm)': 0, 'vapour_pressure_deficit (kPa)': 0,
+            'wind_speed_10m (km/h)': 0, 'wind_speed_100m (km/h)': 0,
+            'wind_direction_10m (°)': 0, 'wind_direction_100m (°)': 0,
+            'wind_gusts_10m (km/h)': 0, 'soil_temperature_0_to_7cm (°C)': 0,
+            'soil_temperature_7_to_28cm (°C)': 0, 'soil_temperature_28_to_100cm (°C)': 0,
+            'soil_temperature_100_to_255cm (°C)': 0, 'soil_moisture_0_to_7cm (m³/m³)': 0,
+            'soil_moisture_7_to_28cm (m³/m³)': 0, 'soil_moisture_28_to_100cm (m³/m³)': 0,
+            'soil_moisture_100_to_255cm (m³/m³)': 0, 'prev_us_aqi': previous_aqi
+        }
+        # Get OpenWeatherMap weather
+        weather = WeatherService.get_weather_data(lat, lon)
+        if weather:
+            main = weather.get('main', {})
+            wind = weather.get('wind', {})
+            clouds = weather.get('clouds', {})
+            rain = weather.get('rain', {})
+            snow = weather.get('snow', {})
+            weather_code = weather.get('weather', [{}])[0].get('id', 0)
+            features['temperature_2m (°C)'] = main.get('temp', 0)
+            features['relative_humidity_2m (%)'] = main.get('humidity', 0)
+            features['pressure_msl (hPa)'] = main.get('pressure', 0)
+            features['wind_speed_10m (km/h)'] = wind.get('speed', 0)
+            features['wind_direction_10m (°)'] = wind.get('deg', 0)
+            features['wind_gusts_10m (km/h)'] = wind.get('gust', 0)
+            features['cloud_cover (%)'] = clouds.get('all', 0)
+            features['rain (mm)'] = rain.get('1h', 0)
+            features['snowfall (cm)'] = snow.get('1h', 0)
+            features['weather_code (wmo code)'] = weather_code
+        # Get additional features (stub: returns zeros, implement actual API as needed)
+        additional = WeatherService.get_additional_weather_features(lat, lon)
+        for k, v in additional.items():
+            features[k] = v
+        return features
+
+    @staticmethod
+    def predict_aqi_from_features(features, model_name='ridge_model.pkl'):
+        """
+        Predict AQI using precompiled full feature set.
+        """
         try:
             model_path = PREDICTION_DIR / model_name
             if not model_path.exists():
                 print(f"Model file not found: {model_path}")
                 return {'error': f"Model not found: {model_name}"}
             model = joblib.load(model_path)
-            features = [
-                aqi_data.get('aqi', 0),
-                aqi_data.get('pm25', 0),
-                aqi_data.get('pm10', 0),
-                aqi_data.get('temperature', 25),
-                aqi_data.get('humidity', 50),
-                aqi_data.get('pressure', 1013)
+            feature_names = [
+                'temperature_2m (°C)', 'relative_humidity_2m (%)', 'dew_point_2m (°C)', 'apparent_temperature (°C)',
+                'precipitation (mm)', 'rain (mm)', 'snowfall (cm)', 'snow_depth (m)',
+                'weather_code (wmo code)', 'pressure_msl (hPa)', 'surface_pressure (hPa)',
+                'cloud_cover (%)', 'cloud_cover_low (%)', 'cloud_cover_mid (%)', 'cloud_cover_high (%)',
+                'et0_fao_evapotranspiration (mm)', 'vapour_pressure_deficit (kPa)', 'wind_speed_10m (km/h)',
+                'wind_speed_100m (km/h)', 'wind_direction_10m (°)', 'wind_direction_100m (°)',
+                'wind_gusts_10m (km/h)', 'soil_temperature_0_to_7cm (°C)', 'soil_temperature_7_to_28cm (°C)',
+                'soil_temperature_28_to_100cm (°C)', 'soil_temperature_100_to_255cm (°C)',
+                'soil_moisture_0_to_7cm (m³/m³)', 'soil_moisture_7_to_28cm (m³/m³)',
+                'soil_moisture_28_to_100cm (m³/m³)', 'soil_moisture_100_to_255cm (m³/m³)',
+                'prev_us_aqi'
             ]
-            X = np.array(features).reshape(1, -1)
+            X = np.array([features[name] for name in feature_names]).reshape(1, -1)
             prediction = model.predict(X)[0]
             return {
                 'predicted_aqi_24h': float(prediction),
