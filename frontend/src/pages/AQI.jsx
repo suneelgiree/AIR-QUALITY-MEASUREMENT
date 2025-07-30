@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, User, LogOut, Search, RefreshCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { airQualityService } from '../services/api';
+import airQualityService from '../services/api/airQuality';
 
 const AQI = () => {
   // UI state
@@ -17,6 +17,11 @@ const AQI = () => {
   const [historyError, setHistoryError] = useState(null);
   const [userInfo, setUserInfo] = useState(null);
 
+  // Predicted AQI state
+  const [predictedAQI, setPredictedAQI] = useState(null);
+  const [predictedLoading, setPredictedLoading] = useState(false);
+  const [predictedError, setPredictedError] = useState(null);
+
   useEffect(() => {
     // Get user info from localStorage (same as Dashboard)
     const storedUser = localStorage.getItem('user');
@@ -26,6 +31,7 @@ const AQI = () => {
 
     fetchAirQualityData();
     fetchHistoryData();
+    fetchPredictedAQI();
   }, []);
 
   const fetchAirQualityData = async () => {
@@ -42,7 +48,7 @@ const AQI = () => {
       } else {
         // No history data, try to update
         const response = await airQualityService.updateAirQuality();
-        setAirQualityData(response.data);
+        setAirQualityData(response);
       }
     } catch (err) {
       console.error('Error fetching air quality:', err);
@@ -67,16 +73,34 @@ const AQI = () => {
     }
   };
 
+  const fetchPredictedAQI = async () => {
+    setPredictedLoading(true);
+    setPredictedError(null);
+    try {
+      const data = await airQualityService.getSVRPrediction();
+      setPredictedAQI(data); // expects object: {aqi, pm25, pm10, category, temperature, ...}
+    } catch (err) {
+      setPredictedError(
+        err?.response?.data?.error ||
+        'Unable to load predicted AQI. Please try again later.'
+      );
+    } finally {
+      setPredictedLoading(false);
+    }
+  };
+
   const refreshData = async () => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await airQualityService.updateAirQuality();
-      setAirQualityData(response.data);
+      setAirQualityData(response);
 
       // Refresh history data too
       fetchHistoryData();
+      // Refresh predicted AQI too
+      fetchPredictedAQI();
     } catch (err) {
       setError('Failed to update air quality data.');
       console.error(err);
@@ -110,6 +134,7 @@ const AQI = () => {
   const accountName = userInfo?.full_name || "User";
   const chartData = getChartData();
   const aqiStatus = airQualityData ? getAqiLabel(airQualityData.aqi) : { label: 'LOADING', color: 'bg-gray-400 text-white' };
+  const predictedStatus = predictedAQI ? getAqiLabel(predictedAQI.aqi) : { label: 'PREDICTING', color: 'bg-gray-400 text-white' };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-100 via-blue-50 to-green-200">
@@ -238,7 +263,7 @@ const AQI = () => {
               </div>
             </div>
             
-            {/* Center/Right: AQI Card and Chart */}
+            {/* Center/Right: AQI Card, Predicted AQI, and Chart */}
             <div className="flex-1 flex flex-col gap-6">
               {/* AQI Info Card */}
               {loading ? (
@@ -308,6 +333,57 @@ const AQI = () => {
                   <p className="text-gray-600">Air quality data is not available. Click update to fetch the latest data.</p>
                 </div>
               )}
+
+              {/* Predicted AQI Card */}
+              <div className="bg-purple-100 rounded-2xl shadow p-6 hover:shadow-lg mt-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg font-semibold text-purple-800">Predicted AQI (SVR Model)</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-purple-200 text-purple-700">Next 24hr</span>
+                </div>
+                {predictedLoading ? (
+                  <div className="animate-pulse space-y-3">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                ) : predictedError ? (
+                  <div className="text-red-500 text-sm">{predictedError}</div>
+                ) : predictedAQI ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-purple-700">AQI</span>
+                      <span className={`font-bold ${predictedAQI.aqi <= 50 ? 'text-green-600' : predictedAQI.aqi <= 100 ? 'text-yellow-600' : predictedAQI.aqi <= 150 ? 'text-orange-600' : 'text-red-600'}`}>
+                        {predictedAQI.aqi}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-purple-700">PM2.5</span>
+                      <span className="font-bold text-purple-500">{predictedAQI.pm25}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-purple-700">PM10</span>
+                      <span className="font-bold text-purple-500">{predictedAQI.pm10}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-purple-700">Temperature</span>
+                      <span className="font-bold text-purple-500">{predictedAQI.temperature}°C</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-purple-700">Category</span>
+                      <span className="font-bold text-purple-500">{predictedAQI.category}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-gray-500">No prediction available</div>
+                )}
+                <button
+                  onClick={fetchPredictedAQI}
+                  className="mt-4 w-full bg-gradient-to-r from-purple-400 to-blue-500 text-white rounded-full py-1 font-semibold shadow hover:from-purple-500 hover:to-blue-600 transition hover:scale-105 flex items-center justify-center"
+                  disabled={predictedLoading}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${predictedLoading ? 'animate-spin' : ''}`} />
+                  Refresh Prediction
+                </button>
+              </div>
               
               {/* Historical AQI Chart */}
               <div className="bg-green-100 rounded-2xl shadow p-6 hover:shadow-lg transition-all">
