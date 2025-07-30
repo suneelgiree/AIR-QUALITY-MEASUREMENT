@@ -38,7 +38,7 @@ const Dashboard = () => {
     } catch (err) {
       console.error('Failed to fetch air quality data:', err);
       setError(
-        err.response?.data?.error ||
+        err?.response?.data?.error ||
         'Unable to load air quality information. Please try again later.'
       );
     } finally {
@@ -55,7 +55,7 @@ const Dashboard = () => {
     } catch (err) {
       console.error('Failed to update air quality:', err);
       setError(
-        err.response?.data?.error ||
+        err?.response?.data?.error ||
         'Unable to update air quality information. Please try again later.'
       );
     } finally {
@@ -109,7 +109,14 @@ const Dashboard = () => {
               <span className="text-blue-900 font-medium">{accountName}</span>
             </button>
             {accountMenu && (
-              <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow z-50">
+              <div className="absolute right-0 mt-2 w-48 bg-white border rounded shadow z-50 py-2">
+                <Link
+                  to="/profile"
+                  className="flex items-center w-full px-4 py-2 text-blue-600 hover:bg-blue-50"
+                  onClick={() => setAccountMenu(false)}
+                >
+                  <User className="w-4 h-4 mr-2" /> View Profile
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="flex items-center w-full px-4 py-2 text-red-600 hover:bg-blue-50"
@@ -124,17 +131,10 @@ const Dashboard = () => {
 
       {/* Dashboard Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Location display removed */}
-        <div className="bg-gradient-to-r from-blue-200 via-green-100 to-green-200 rounded-2xl shadow p-6 mb-8">
-          <h1 className="text-3xl font-bold text-blue-900">Welcome to your Dashboard!</h1>
-          <p className="text-blue-700 mt-2">
-            Monitor real-time air quality and get personalized recommendations to stay healthy.
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
           {/* Left Column */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 space-y-6">
+            {/* Existing "Today's Overview" card */}
             <div className="bg-white/90 rounded-2xl shadow p-6 hover:shadow-xl transition-all h-full">
               <div className="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
                 <span>Today's Overview</span>
