@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, User, LogOut, Search, RefreshCw, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { airQualityService } from '../services/api';
+import airQualityService from '../services/api/airQuality';
 import AirQualityCard from '../components/AirQualityCard';
 
 const Dashboard = () => {
@@ -11,6 +11,12 @@ const Dashboard = () => {
   const [airQualityData, setAirQualityData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // SVR predicted AQI state
+  const [svrPrediction, setSVRPrediction] = useState(null);
+  const [predictionLoading, setPredictionLoading] = useState(false);
+  const [predictionError, setPredictionError] = useState(null);
+
   const [userInfo, setUserInfo] = useState(null);
 
   const isLoggedIn = Boolean(localStorage.getItem('access_token'));
@@ -22,6 +28,7 @@ const Dashboard = () => {
     }
 
     loadAirQualityData();
+    loadSVRPrediction();
   }, []);
 
   const loadAirQualityData = async () => {
@@ -33,7 +40,7 @@ const Dashboard = () => {
         setAirQualityData(historyData[0]);
       } else {
         const response = await airQualityService.updateAirQuality();
-        setAirQualityData(response.data);
+        setAirQualityData(response);
       }
     } catch (err) {
       console.error('Failed to fetch air quality data:', err);
@@ -51,7 +58,7 @@ const Dashboard = () => {
     setError(null);
     try {
       const response = await airQualityService.updateAirQuality();
-      setAirQualityData(response.data);
+      setAirQualityData(response);
     } catch (err) {
       console.error('Failed to update air quality:', err);
       setError(
@@ -60,6 +67,26 @@ const Dashboard = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  // SVR predicted AQI loading
+  const loadSVRPrediction = async () => {
+    setPredictionLoading(true);
+    setPredictionError(null);
+    try {
+      const data = await airQualityService.getSVRPrediction();
+      console.log('SVR Prediction API response:', data);
+      // The API returns a single predicted value object, not an array
+      setSVRPrediction(data);
+    } catch (err) {
+      console.error('Failed to fetch SVR prediction:', err);
+      setPredictionError(
+        err?.response?.data?.error ||
+        'Unable to load predicted AQI. Please try again later.'
+      );
+    } finally {
+      setPredictionLoading(false);
     }
   };
 
@@ -134,13 +161,12 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
           {/* Left Column */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Existing "Today's Overview" card */}
+            {/* Today's Overview card */}
             <div className="bg-white/90 rounded-2xl shadow p-6 hover:shadow-xl transition-all h-full">
               <div className="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
                 <span>Today's Overview</span>
                 <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">Live</span>
               </div>
-
               {loading ? (
                 <div className="animate-pulse space-y-3">
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -189,6 +215,62 @@ const Dashboard = () => {
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Update Data
+              </button>
+            </div>
+
+            {/* SVR Predicted AQI card */}
+            <div className="bg-white/90 rounded-2xl shadow p-6 mt-6 h-full">
+              <div className="text-lg font-semibold text-purple-800 mb-4 flex items-center gap-2">
+                <span>SVR Predicted AQI</span>
+                <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">Model</span>
+              </div>
+              {predictionLoading ? (
+                <div className="animate-pulse space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ) : predictionError ? (
+                <div className="text-red-500 text-sm">{predictionError}</div>
+              ) : svrPrediction ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-purple-700">Predicted AQI</span>
+                    <span className={`font-bold ${
+                      svrPrediction.aqi <= 50 ? 'text-green-600' :
+                      svrPrediction.aqi <= 100 ? 'text-yellow-600' :
+                      svrPrediction.aqi <= 150 ? 'text-orange-600' :
+                      'text-red-600'
+                    }`}>
+                      {svrPrediction.aqi}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-purple-700">PM2.5</span>
+                    <span className="font-bold text-purple-500">{svrPrediction.pm25}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-purple-700">PM10</span>
+                    <span className="font-bold text-purple-500">{svrPrediction.pm10}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-purple-700">Temperature</span>
+                    <span className="font-bold text-purple-500">{svrPrediction.temperature}°C</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-purple-700">Category</span>
+                    <span className="font-bold text-purple-500">{svrPrediction.category}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-500">No prediction available</p>
+              )}
+              <button
+                onClick={loadSVRPrediction}
+                className="mt-6 w-full bg-gradient-to-r from-purple-400 to-blue-500 text-white rounded-full py-1 font-semibold shadow hover:from-purple-500 hover:to-blue-600 transition hover:scale-105 flex items-center justify-center"
+                disabled={predictionLoading}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${predictionLoading ? 'animate-spin' : ''}`} />
+                Refresh Prediction
               </button>
             </div>
           </div>

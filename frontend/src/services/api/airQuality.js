@@ -11,7 +11,7 @@ const airQualityService = {
       throw error;
     }
   },
-  
+
   // Get historical AQI data
   getHistory: async () => {
     try {
@@ -19,6 +19,17 @@ const airQualityService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching air quality history:', error);
+      throw error;
+    }
+  },
+
+  // Get SVR predicted AQI
+  getSVRPrediction: async () => {
+    try {
+      const response = await axios.post('/air-quality/sensor/update/',{ use_api: true});
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching SVR prediction:', error);
       throw error;
     }
   }
