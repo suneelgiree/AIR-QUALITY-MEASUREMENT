@@ -94,6 +94,18 @@
       "invalidCredentials": "Invalid email or password",
       "networkError": "Network error. Please check your connection.",
       "unexpectedError": "An unexpected error occurred. Please try again."
+    },
+  "profile": {
+      "title": "Profile",
+      "name": "Full Name",
+      "email": "Email",
+      "location": "Location",
+      "coordinates": "Coordinates",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "fetchError": "Failed to fetch profile. Please try again.",
+      "updateError": "Failed to update profile."
     }
   }
 

@@ -5,7 +5,7 @@ import apiClient from './axios';
  * Assumes a GET /api/auth/profile/ endpoint.
  */
 const getProfile = async () => {
-  const response = await apiClient.get('/api/auth/profile/');
+  const response = await apiClient.get('/auth/profile/');
   return response.data;
 };
 
@@ -14,7 +14,7 @@ const getProfile = async () => {
  * Assumes a PATCH /api/auth/profile/ endpoint.
  */
 const updateProfile = async (profileData) => {
-  const response = await apiClient.patch('/api/auth/profile/', profileData);
+  const response = await apiClient.patch('/auth/profile/', profileData);
   return response.data;
 };
 
