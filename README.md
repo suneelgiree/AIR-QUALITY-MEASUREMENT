@@ -5,7 +5,6 @@
 ![React](https://img.shields.io/badge/React-18.2-blue)
 ![Machine Learning](https://img.shields.io/badge/ML-Enabled-orange)
 ![IoT](https://img.shields.io/badge/IoT-Ready-red)
-![AWS](https://img.shields.io/badge/Cloud-AWS-yellow)
 
 A comprehensive air quality monitoring system combining real-time sensor data, external API integration, and machine learning predictions to provide actionable air quality information.
 
@@ -17,8 +16,9 @@ A comprehensive air quality monitoring system combining real-time sensor data, e
 - [Features](#features)
 - [System Architecture](#system-architecture)
 - [Technologies Used](#technologies-used)
-- [Installation & Deployment](#installation--deployment)
+- [Installation](#installation)
 - [Usage](#usage)
+- [Viewing SQLite Data](#viewing-sqlite-data)
 - [API Documentation](#api-documentation)
 - [Machine Learning Models](#machine-learning-models)
 - [Contributing](#contributing)
@@ -28,7 +28,7 @@ A comprehensive air quality monitoring system combining real-time sensor data, e
 
 ## 🌟 Overview
 
-**Air Quality Measurement System** is a full-stack IoT application for monitoring, analyzing, and forecasting air quality. It combines sensor data, weather APIs, and AI models to provide users with real-time and predictive air quality insights, personalized health tips, and historical data visualization.
+**Air Quality Measurement System** is a full-stack IoT application for monitoring, analyzing, and forecasting air quality. It combines sensor data, weather APIs, and AI models to provide users with real-time and predictive insights.
 
 ---
 
@@ -109,23 +109,15 @@ A comprehensive air quality monitoring system combining real-time sensor data, e
 - Python (sensor integration)
 - PMS7003, BME280 sensors
 
-### Cloud/Deployment
-- AWS Elastic Beanstalk (backend)
-- AWS S3 + CloudFront (frontend static hosting)
-- AWS RDS (database, optional)
-
 ---
 
-## 🚀 Installation & Deployment
+## 🚀 Installation
 
 ### Prerequisites
 - Python 3.8+
 - Node.js 14+
 - npm 6+
 - Git
-- AWS account (for cloud deployment)
-
----
 
 ### Local Setup
 
@@ -160,29 +152,29 @@ python simulate_sensors.py
 
 ---
 
-### AWS Cloud Deployment
+## 🔎 Viewing SQLite Data
 
-#### **Backend (Elastic Beanstalk)**
-1. Prepare `requirements.txt`, `Procfile`, `runtime.txt`.
-2. Initialize EB:
-   ```bash
-   eb init -p python-3.11 air-quality-app
-   eb create air-quality-env
-   eb open
-   ```
-3. Set environment variables (SECRET_KEY, API keys) in AWS EB dashboard.
-4. (Optional) Connect RDS PostgreSQL database.
-5. Use S3 for static/media files (`django-storages`).
+By default, the backend uses SQLite for local development. You can view and query the data stored in `db.sqlite3` using any of these methods:
 
-#### **Frontend (S3 + CloudFront)**
-1. Build frontend:
-   ```bash
-   npm run build  # or vite build
-   ```
-2. Upload `/dist` (or `/build`) to S3 bucket (static website hosting enabled).
-3. Set public read policy for S3 objects.
-4. (Optional) Configure CloudFront for CDN and HTTPS.
-5. Set API URL in `.env` to Elastic Beanstalk backend endpoint.
+### 1. Using the SQLite Command-Line
+```bash
+sqlite3 db.sqlite3
+# In the SQLite shell:
+.tables           # List all tables
+SELECT * FROM <table_name>;  # Show table data
+PRAGMA table_info(<table_name>);  # See columns of a table
+.exit             # Exit the shell
+```
+
+### 2. Using DB Browser for SQLite (GUI)
+- Download from [https://sqlitebrowser.org/](https://sqlitebrowser.org/)
+- Open your `db.sqlite3` file and view/edit tables visually.
+
+### 3. Using Django Admin Panel
+- Run `python manage.py createsuperuser` (if not already)
+- Run `python manage.py runserver`
+- Visit `http://127.0.0.1:8000/admin` and log in.
+- Browse and manage all registered models.
 
 ---
 
@@ -255,4 +247,4 @@ MIT License - see LICENSE file for details.
 
 ---
 
-Developed by Suneel Giree, Slok Regmi, Laxman Khatri, Prajil Baral | © 2023-2025 AIR-QUALITY-MEASUREMENT
+Developed by Sunil Giri, Slok Regmi, Laxman Khatri, Prajil Baral | © 2023-2025 AIR-QUALITY-MEASUREMENT
