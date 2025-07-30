@@ -23,15 +23,6 @@ def register(request):
             user.longitude = lon
             user.save()
             
-            # Fetch and store air quality data
-            # air_quality = WeatherService.get_air_quality_data(lat, lon)
-            # if air_quality:
-            #     AirQualityData.objects.create(
-            #         user=user,
-            #         location=user.location,
-            #         **air_quality
-            #     )
-        
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         
@@ -77,9 +68,20 @@ def login(request):
         'error': 'Invalid credentials'
     }, status=status.HTTP_401_UNAUTHORIZED)
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def profile(request):
-    """Get user profile"""
-    serializer = UserProfileSerializer(request.user)
-    return Response(serializer.data)
+    """Get or update user profile"""
+    user = request.user
+    if request.method == 'GET':
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)
+    elif request.method == 'PATCH':
+        serializer = UserProfileSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            # Re-fetch user from DB to ensure fresh data
+            user.refresh_from_db()
+            refreshed_serializer = UserProfileSerializer(user)
+            return Response(refreshed_serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
