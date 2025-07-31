@@ -47,8 +47,17 @@ def update_air_quality(request):
 
         # Prepare full feature set for prediction
         features = PredictionService.fetch_full_feature_set(user.latitude, user.longitude, previous_aqi=previous_aqi)
-        prediction = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl')
-        air_quality['prediction'] = prediction
+        # Now predict for 7 days (24h increments)
+        predictions = []
+        for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
+            pred = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=hours_ahead)
+            predictions.append({
+                "hours_ahead": hours_ahead,
+                "predicted_aqi": pred.get('predicted_aqi', pred.get('predicted_aqi_24h', None)),
+                "model_used": "svr_model.pkl",
+                "confidence": pred.get('confidence', None)
+            })
+        air_quality['predictions'] = predictions
     except Exception as e:
         logger.error(f"Prediction error: {str(e)}")
         air_quality['prediction_error'] = str(e)
@@ -72,7 +81,7 @@ class AirQualityUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        """Update air quality using sensor data (simulation, API, or real sensor)"""
+        """Update air quality using sensor data (simulation, API, or real sensor) and return 7-day predictions"""
         try:
             use_api = request.data.get('use_api', False)
             use_real_sensor = request.data.get('use_real_sensor', False)
@@ -100,7 +109,8 @@ class AirQualityUpdateView(APIView):
                     'category': 'Unknown',
                     'temperature': sensor_data.get('temperature'),
                     'humidity': sensor_data.get('humidity'),
-                    'pressure': sensor_data.get('pressure')
+                    'pressure': sensor_data.get('pressure'),
+                    'location': user.location
                 }
                 data_source = 'OpenWeatherMap API'
             elif use_real_sensor:
@@ -109,41 +119,49 @@ class AirQualityUpdateView(APIView):
                 if not sensor_data:
                     return Response({'error': 'Failed to read from real sensor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 aqi_data = AQICalculatorService.calculate_aqi_from_data(sensor_data)
+                aqi_data['location'] = user.location
                 data_source = 'Real Sensor'
             else:
                 # Use simulation data
                 sensor_data = AQICalculatorService.read_sensor_data(use_simulated=True)
                 aqi_data = AQICalculatorService.calculate_aqi_from_data(sensor_data)
+                aqi_data['location'] = user.location
                 data_source = 'Local Sensors (Simulation)'
 
             record = AirQualityRecord.objects.create(
-                user=request.user,
+                user=user,
                 aqi=aqi_data['aqi'],
                 pm25=aqi_data['pm25'],
                 pm10=aqi_data['pm10'],
                 temperature=aqi_data.get('temperature'),
                 humidity=aqi_data.get('humidity'),
                 pressure=aqi_data.get('pressure'),
-                category=aqi_data['category'] if 'category' in aqi_data else 'Unknown'
+                category=aqi_data.get('category', 'Unknown'),
+                location=aqi_data.get('location', 'Unknown')
             )
 
-            # Only use SVR model for prediction
+            # Predict AQI for next 7 days in 24h increments using SVR model
             previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
             previous_aqi = previous_record.aqi if previous_record else 0
-            lat = user.latitude if hasattr(user, 'latitude') else None
-            lon = user.longitude if hasattr(user, 'longitude') else None
+            lat = getattr(user, 'latitude', None)
+            lon = getattr(user, 'longitude', None)
             features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=previous_aqi)
 
             predictions = []
-            prediction = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl')
-            if 'error' not in prediction:
+            for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
+                pred = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=hours_ahead)
                 AQIPrediction.objects.create(
                     air_quality_record=record,
-                    hours_ahead=24,
-                    predicted_aqi=prediction['predicted_aqi_24h'],
+                    hours_ahead=hours_ahead,
+                    predicted_aqi=pred.get('predicted_aqi', pred.get('predicted_aqi_24h', None)),
                     model_used="svr_model.pkl"
                 )
-            predictions.append(prediction)
+                predictions.append({
+                    "hours_ahead": hours_ahead,
+                    "predicted_aqi": pred.get('predicted_aqi', pred.get('predicted_aqi_24h', None)),
+                    "model_used": "svr_model.pkl",
+                    "confidence": pred.get('confidence', None)
+                })
 
             response_data = {
                 **aqi_data,
