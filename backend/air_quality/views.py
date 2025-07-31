@@ -41,7 +41,6 @@ def update_air_quality(request):
             'error': 'Failed to fetch air quality data'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # Prepare sensor data for AQI calculation
     sensor_data = {
         'pm25': air_quality_raw['pm25'],
         'pm10': air_quality_raw['pm10'],
@@ -52,7 +51,6 @@ def update_air_quality(request):
         sensor_data['humidity'] = weather['main'].get('humidity')
         sensor_data['pressure'] = weather['main'].get('pressure')
 
-    # Calculate AQI using AQICalculatorService
     calculated_aqi_data = AQICalculatorService.calculate_aqi_from_data(sensor_data)
     air_quality = {
         'aqi': calculated_aqi_data['aqi'],
@@ -62,17 +60,16 @@ def update_air_quality(request):
         'no2': air_quality_raw.get('no2'),
         'so2': air_quality_raw.get('so2'),
         'o3': air_quality_raw.get('o3'),
-        'category': calculated_aqi_data.get('category', 'Unknown'),
-        'temperature': sensor_data.get('temperature'),
-        'humidity': sensor_data.get('humidity'),
-        'pressure': sensor_data.get('pressure'),
         'location': user.location
     }
+    
+    # Only keep fields present in the AirQualityData model
+    model_fields = {'aqi', 'pm25', 'pm10', 'co', 'no2', 'so2', 'o3', 'location'}
+    air_quality_filtered = {k: v for k, v in air_quality.items() if k in model_fields}
 
     record = AirQualityData.objects.create(
         user=user,
-        location=user.location,
-        **air_quality
+        **air_quality_filtered
     )
 
     try:
@@ -179,16 +176,12 @@ class AirQualityUpdateView(APIView):
             else:
                 return Response({'error': 'No valid AQI data source selected (simulation disabled)'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Only keep fields present in the AirQualityRecord model
+            record_fields = {'aqi', 'pm25', 'pm10', 'temperature', 'humidity', 'pressure', 'category', 'location'}
+            aqi_data_filtered = {k: v for k, v in aqi_data.items() if k in record_fields}
             record = AirQualityRecord.objects.create(
                 user=user,
-                aqi=aqi_data['aqi'],
-                pm25=aqi_data['pm25'],
-                pm10=aqi_data['pm10'],
-                temperature=aqi_data.get('temperature'),
-                humidity=aqi_data.get('humidity'),
-                pressure=aqi_data.get('pressure'),
-                category=aqi_data.get('category', 'Unknown'),
-                location=aqi_data.get('location', 'Unknown')
+                **aqi_data_filtered
             )
 
             previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()

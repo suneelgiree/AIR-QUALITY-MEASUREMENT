@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import airQualityService from '../services/api/airQuality';
 
 const AQI = () => {
-  // UI state
   const [accountMenu, setAccountMenu] = useState(false);
   const navigate = useNavigate();
 
@@ -12,120 +11,67 @@ const AQI = () => {
   const [airQualityData, setAirQualityData] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState(null);
   const [historyError, setHistoryError] = useState(null);
   const [userInfo, setUserInfo] = useState(null);
 
-  // Predicted AQI state (from predictions array)
+  // Predicted AQI state
   const [predictedAQI, setPredictedAQI] = useState(null);
   const [predictedLoading, setPredictedLoading] = useState(false);
-  const [predictedError, setPredictedError] = useState(null);
+  const [disableUpdate, setDisableUpdate] = useState(false);
 
   useEffect(() => {
-    // Get user info from localStorage (same as Dashboard)
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUserInfo(JSON.parse(storedUser));
-    }
-
-    fetchAirQualityData();
-    fetchHistoryData();
-    fetchPredictedAQI();
+    if (storedUser) setUserInfo(JSON.parse(storedUser));
+    loadAllData();
+    // eslint-disable-next-line
   }, []);
 
-  const fetchAirQualityData = async () => {
+  // Central loader for all main data
+  const loadAllData = async () => {
     setLoading(true);
+    setDisableUpdate(true);
     setError(null);
+    setHistoryError(null);
+    setPredictedLoading(true);
 
     try {
-      // Use sensor history endpoint
+      // Fetch history (sensor endpoint)
       const history = await airQualityService.getSensorHistory();
-
-      // Defensive: accept both array and object responses
       let sensorHistory = [];
-      if (Array.isArray(history)) {
-        sensorHistory = history;
-      } else if (history && typeof history === "object") {
+      if (Array.isArray(history)) sensorHistory = history;
+      else if (history && typeof history === "object") 
         sensorHistory = history.sensor_history || history.aqilog_history || [];
-      }
+      setHistoryData(sensorHistory);
 
-      if (sensorHistory.length > 0) {
-        // Use the most recent record for display
-        setAirQualityData(sensorHistory[0]);
-      } else {
-        // No history data, try to update live
+      // Use the most recent record for display (fallback to live if none)
+      if (sensorHistory.length > 0) setAirQualityData(sensorHistory[0]);
+      else {
         const response = await airQualityService.updateAirQuality();
         setAirQualityData(response);
       }
-    } catch (err) {
-      console.error('Error fetching air quality:', err);
-      setError('Failed to load air quality data. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const fetchHistoryData = async () => {
-    setHistoryLoading(true);
-    setHistoryError(null);
-
-    try {
-      const history = await airQualityService.getSensorHistory();
-      // Defensive: accept both array and object responses
-      let sensorHistory = [];
-      if (Array.isArray(history)) {
-        sensorHistory = history;
-      } else if (history && typeof history === "object") {
-        sensorHistory = history.sensor_history || history.aqilog_history || [];
+      // Prediction
+      try {
+        const predictionResponse = await airQualityService.updateSensor({ use_api: true });
+        const predictions = predictionResponse.predictions || [];
+        const next24hr = predictions.find(p => p.hours_ahead === 24);
+        setPredictedAQI(next24hr || null);
+      } catch (err) {
+        setPredictedAQI(null);
       }
-      setHistoryData(sensorHistory);
     } catch (err) {
-      console.error('Error fetching history:', err);
+      setError('Failed to load air quality data. Please try again.');
       setHistoryError('Failed to load air quality history.');
     } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  const fetchPredictedAQI = async () => {
-    setPredictedLoading(true);
-    setPredictedError(null);
-    try {
-      // Use updateSensor to get prediction response (SVR)
-      const data = await airQualityService.updateSensor({ use_api: true });
-      // data.predictions is an array; show next 24hr prediction if available
-      const predictions = data.predictions || [];
-      const next24hr = predictions.find(p => p.hours_ahead === 24);
-      setPredictedAQI(next24hr || null);
-    } catch (err) {
-      setPredictedError(
-        err?.response?.data?.error ||
-        'Unable to load predicted AQI. Please try again later.'
-      );
-    } finally {
+      setLoading(false);
+      setDisableUpdate(false);
       setPredictedLoading(false);
     }
   };
 
   const refreshData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Update live AQI from OpenWeatherMap
-      const response = await airQualityService.updateAirQuality();
-      setAirQualityData(response);
-
-      // Refresh history and prediction too
-      fetchHistoryData();
-      fetchPredictedAQI();
-    } catch (err) {
-      setError('Failed to update air quality data.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    await loadAllData();
   };
 
   const handleLogout = () => {
@@ -146,7 +92,6 @@ const AQI = () => {
 
   const getChartData = () => {
     if (!Array.isArray(historyData) || historyData.length === 0) return [];
-    // Defensive: only use items with aqi value! (for AQILog: 'overall_aqi', for AirQualityRecord: 'aqi')
     return historyData
       .filter(item => typeof item.aqi === "number" || typeof item.overall_aqi === "number")
       .slice(0, 24)
@@ -158,27 +103,25 @@ const AQI = () => {
   const chartData = getChartData();
   const aqiStatus = airQualityData ? getAqiLabel(airQualityData.aqi ?? airQualityData.overall_aqi) : { label: 'LOADING', color: 'bg-gray-400 text-white' };
   const predictedStatus = predictedAQI ? getAqiLabel(predictedAQI.predicted_aqi) : { label: 'PREDICTING', color: 'bg-gray-400 text-white' };
+  const shouldHideData = loading && !airQualityData;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-100 via-blue-50 to-green-200">
-      {/* Dashboard Navbar with Search */}
       <nav className="bg-white/80 shadow flex items-center justify-between px-6 py-4 mb-6">
-        {/* Left: Logo & Links */}
         <div className="flex items-center space-x-6">
           <Link to="/dashboard" className="text-2xl font-bold text-blue-900 hover:text-green-600 transition-colors">DashBoard</Link>
           <Link to="/aqi" className="text-blue-800 hover:text-green-600 font-medium transition-colors">AQI</Link>
           <Link to="/forecasting" className="text-blue-800 hover:text-green-600 font-medium transition-colors">Forecasting</Link>
         </div>
-        {/* Center: Search Bar */}
         <div className="flex items-center bg-green-100 rounded-full px-4 py-2 w-80 shadow-inner mx-6">
           <input
             type="text"
             placeholder="Search location..."
             className="bg-transparent outline-none flex-1 text-green-900 placeholder:text-green-400"
+            disabled
           />
           <Search className="w-5 h-5 text-green-400" />
         </div>
-        {/* Right: Notification & Account */}
         <div className="flex items-center space-x-6 relative">
           <button className="p-2 rounded-full hover:bg-blue-100 transition-colors" title="Notifications">
             <Bell className="w-6 h-6 text-blue-800" />
@@ -205,25 +148,21 @@ const AQI = () => {
         </div>
       </nav>
       
-      {/* Main AQI Content */}
       <div className="flex justify-center items-start py-4">
         <div className="w-full max-w-6xl bg-white/80 rounded-3xl shadow-xl p-8 flex flex-col gap-6">
-          {/* Top Row - Header with Refresh Button */}
           <div className="flex justify-between items-center mb-2">
             <h1 className="text-2xl font-bold text-green-900">Air Quality Index</h1>
             <button 
               onClick={refreshData} 
               className="flex items-center px-4 py-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
-              disabled={loading}
+              disabled={loading || disableUpdate}
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Update Data
             </button>
           </div>
           
-          {/* Main Content */}
           <div className="flex flex-col md:flex-row gap-6">
-            {/* Left: AQI Navigator */}
             <div className="w-full md:w-64 flex-shrink-0">
               <div className="bg-white rounded-2xl shadow p-4 mb-6 hover:shadow-lg hover:-translate-y-1 transition-all">
                 <div className="text-gray-500 text-sm mb-2">Current Location</div>
@@ -240,7 +179,7 @@ const AQI = () => {
                         <div className="text-xs text-gray-500">Location: {airQualityData.location ?? airQualityData.device_location ?? 'Unknown'}</div>
                         <div className="text-xs text-gray-500">Last updated: {airQualityData.timestamp ? new Date(airQualityData.timestamp).toLocaleTimeString() : '—'}</div>
                       </>
-                    ) : loading ? (
+                    ) : shouldHideData ? (
                       <div className="text-sm text-gray-500">Loading data...</div>
                     ) : (
                       <div className="text-sm text-gray-500">No data available</div>
@@ -249,7 +188,6 @@ const AQI = () => {
                 </div>
               </div>
               
-              {/* AQI Understanding Card */}
               <div className="bg-green-100 rounded-2xl shadow p-4 hover:shadow-lg hover:-translate-y-1 transition-all">
                 <div className="font-semibold text-green-800 mb-3">Understanding AQI</div>
                 <div className="space-y-2">                
@@ -257,27 +195,22 @@ const AQI = () => {
                     <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
                     <span className="text-xs text-gray-600">0-50: Good</span>
                   </div>
-                  
                   <div className="flex items-center">
                     <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
                     <span className="text-xs text-gray-600">51-100: Moderate</span>
                   </div>
-                  
                   <div className="flex items-center">
                     <div className="w-3 h-3 rounded-full bg-orange-500 mr-2"></div>
                     <span className="text-xs text-gray-600">101-150: Unhealthy for Sensitive Groups</span>
                   </div>
-                  
                   <div className="flex items-center">
                     <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
                     <span className="text-xs text-gray-600">151-200: Unhealthy</span>
                   </div>
-                  
                   <div className="flex items-center">
                     <div className="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>
                     <span className="text-xs text-gray-600">201-300: Very Unhealthy</span>
                   </div>
-                  
                   <div className="flex items-center">
                     <div className="w-3 h-3 rounded-full bg-rose-800 mr-2"></div>
                     <span className="text-xs text-gray-600">301+: Hazardous</span>
@@ -286,10 +219,8 @@ const AQI = () => {
               </div>
             </div>
             
-            {/* Center/Right: AQI Card, Predicted AQI, and Chart */}
             <div className="flex-1 flex flex-col gap-6">
-              {/* AQI Info Card */}
-              {loading ? (
+              {shouldHideData ? (
                 <div className="bg-gradient-to-r from-green-200 via-yellow-100 to-yellow-200 rounded-2xl shadow p-6 animate-pulse">
                   <div className="h-6 bg-white/30 rounded w-1/3 mb-4"></div>
                   <div className="h-10 bg-white/30 rounded w-1/4 mb-2"></div>
@@ -327,7 +258,6 @@ const AQI = () => {
                       {aqiStatus.label}
                     </span>
                     <div className="mt-3 flex items-center gap-1">
-                      {/* AQI Color Bar */}
                       <div className="w-32 h-3 rounded bg-gradient-to-r from-green-400 via-yellow-400 via-orange-400 via-red-500 to-purple-700" />
                       <span className="text-xs text-gray-500 ml-2">{airQualityData.aqi ?? airQualityData.overall_aqi}</span>
                     </div>
@@ -368,8 +298,6 @@ const AQI = () => {
                     <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
                     <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                   </div>
-                ) : predictedError ? (
-                  <div className="text-red-500 text-sm">{predictedError}</div>
                 ) : predictedAQI ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -407,9 +335,9 @@ const AQI = () => {
                   <div className="text-gray-500">No prediction available</div>
                 )}
                 <button
-                  onClick={fetchPredictedAQI}
+                  onClick={loadAllData}
                   className="mt-4 w-full bg-gradient-to-r from-purple-400 to-blue-500 text-white rounded-full py-1 font-semibold shadow hover:from-purple-500 hover:to-blue-600 transition hover:scale-105 flex items-center justify-center"
-                  disabled={predictedLoading}
+                  disabled={predictedLoading || disableUpdate}
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${predictedLoading ? 'animate-spin' : ''}`} />
                   Refresh Prediction
@@ -419,11 +347,7 @@ const AQI = () => {
               {/* Historical AQI Chart */}
               <div className="bg-green-100 rounded-2xl shadow p-6 hover:shadow-lg transition-all">
                 <div className="font-semibold text-green-800 mb-2">AQI History</div>
-                {historyLoading ? (
-                  <div className="h-40 bg-white/30 rounded animate-pulse flex items-center justify-center">
-                    <p className="text-green-800">Loading history data...</p>
-                  </div>
-                ) : historyError ? (
+                {historyError ? (
                   <div className="h-40 bg-red-50 rounded flex items-center justify-center">
                     <p className="text-red-600">{historyError}</p>
                   </div>
@@ -462,7 +386,7 @@ const AQI = () => {
               {/* More Details Section */}
               <div className="bg-white rounded-2xl shadow p-6">
                 <h3 className="text-lg font-semibold text-green-800 mb-4">Health Impact</h3>
-                {loading ? (
+                {shouldHideData ? (
                   <div className="animate-pulse">
                     <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
                     <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
@@ -477,31 +401,26 @@ const AQI = () => {
                         Air quality is considered satisfactory, and air pollution poses little or no risk.
                       </p>
                     )}
-                    
                     {(airQualityData.aqi ?? airQualityData.overall_aqi) > 50 && (airQualityData.aqi ?? airQualityData.overall_aqi) <= 100 && (
                       <p className="text-gray-700">
                         Air quality is acceptable; however, for some pollutants there may be a moderate health concern for a very small number of people who are unusually sensitive to air pollution.
                       </p>
                     )}
-                    
                     {(airQualityData.aqi ?? airQualityData.overall_aqi) > 100 && (airQualityData.aqi ?? airQualityData.overall_aqi) <= 150 && (
                       <p className="text-gray-700">
                         Members of sensitive groups may experience health effects. The general public is not likely to be affected.
                       </p>
                     )}
-                    
                     {(airQualityData.aqi ?? airQualityData.overall_aqi) > 150 && (airQualityData.aqi ?? airQualityData.overall_aqi) <= 200 && (
                       <p className="text-gray-700">
                         Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.
                       </p>
                     )}
-                    
                     {(airQualityData.aqi ?? airQualityData.overall_aqi) > 200 && (airQualityData.aqi ?? airQualityData.overall_aqi) <= 300 && (
                       <p className="text-gray-700">
                         Health warnings of emergency conditions. The entire population is more likely to be affected.
                       </p>
                     )}
-                    
                     {(airQualityData.aqi ?? airQualityData.overall_aqi) > 300 && (
                       <p className="text-gray-700">
                         Health alert: everyone may experience more serious health effects.

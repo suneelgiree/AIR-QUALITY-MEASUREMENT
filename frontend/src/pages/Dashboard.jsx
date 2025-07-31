@@ -6,7 +6,7 @@ import AirQualityCard from '../components/AirQualityCard';
 
 // Helper to decide if sensor AQI is valid
 const isSensorAqiValid = (sensorData) =>
-  typeof sensorData.aqi === "number" && sensorData.aqi > 10; // Use >10 as threshold for realistic values
+  typeof sensorData.aqi === "number" && sensorData.aqi > 10;
 
 // Defensive AQI extraction for live AQI
 const extractAQI = (data) =>
@@ -42,11 +42,16 @@ const Dashboard = () => {
       setUserInfo(JSON.parse(storedUser));
     }
     loadDashboardData();
+    // eslint-disable-next-line
   }, []);
+
+  // Fix: Use a separate state for disabling the update button to prevent double requests
+  const [disableUpdate, setDisableUpdate] = useState(false);
 
   const loadDashboardData = async () => {
     setLoading(true);
     setError(null);
+    setDisableUpdate(true);
     try {
       const data = await airQualityService.getDashboard();
       setDashboardData(data);
@@ -57,6 +62,7 @@ const Dashboard = () => {
       );
     } finally {
       setLoading(false);
+      setDisableUpdate(false);
     }
   };
 
@@ -85,9 +91,13 @@ const Dashboard = () => {
   // For history chart, use sensor history
   const historyData = dashboardData?.history?.sensor_data || [];
 
-  const refreshAll = () => {
-    loadDashboardData();
+  const refreshAll = async () => {
+    // Fix: Use async/await to reload and show loader
+    await loadDashboardData();
   };
+
+  // Fix: If loading, don't show stale data
+  const shouldHideData = loading && !dashboardData;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-green-50 to-green-200">
@@ -109,6 +119,7 @@ const Dashboard = () => {
             type="text"
             placeholder="Search location..."
             className="bg-transparent outline-none text-blue-900"
+            disabled
           />
         </div>
         <div className="flex items-center space-x-6 relative">
@@ -155,7 +166,7 @@ const Dashboard = () => {
                 <span>Today's Overview</span>
                 <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">Live</span>
               </div>
-              {loading ? (
+              {shouldHideData ? (
                 <div className="animate-pulse space-y-3">
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                   <div className="h-4 bg-gray-200 rounded w-1/2"></div>
@@ -205,7 +216,7 @@ const Dashboard = () => {
               <button
                 onClick={refreshAll}
                 className="mt-6 w-full bg-gradient-to-r from-blue-400 to-green-500 text-white rounded-full py-1 font-semibold shadow hover:from-blue-500 hover:to-green-600 transition hover:scale-105 flex items-center justify-center"
-                disabled={loading}
+                disabled={loading || disableUpdate}
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Update Data
@@ -218,7 +229,7 @@ const Dashboard = () => {
                 <span>SVR Predicted AQI</span>
                 <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">Model</span>
               </div>
-              {loading ? (
+              {shouldHideData ? (
                 <div className="animate-pulse space-y-3">
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                   <div className="h-4 bg-gray-200 rounded w-1/2"></div>
@@ -249,7 +260,7 @@ const Dashboard = () => {
               <button
                 onClick={refreshAll}
                 className="mt-6 w-full bg-gradient-to-r from-purple-400 to-blue-500 text-white rounded-full py-1 font-semibold shadow hover:from-purple-500 hover:to-blue-600 transition hover:scale-105 flex items-center justify-center"
-                disabled={loading}
+                disabled={loading || disableUpdate}
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh Prediction
@@ -293,7 +304,7 @@ const Dashboard = () => {
           <div className="lg:col-span-3 space-y-6">
             <div className="bg-white/90 rounded-2xl shadow p-6">
               <h3 className="text-lg font-semibold text-blue-800 mb-4">Recommendations</h3>
-              {loading ? (
+              {shouldHideData ? (
                 <div className="animate-pulse">
                   <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
                   <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
@@ -347,13 +358,25 @@ const Dashboard = () => {
   );
 };
 
-const Tip = ({ color, text }) => (
-  <div className="flex items-start">
-    <div className={`bg-${color}-100 p-1 rounded-full mr-2 mt-1`}>
-      <AlertCircle className={`w-4 h-4 text-${color}-500`} />
+// Fix: Tailwind doesn't support dynamic color classes, so we use static ones
+const Tip = ({ color, text }) => {
+  const colorMap = {
+    green: { bg: 'bg-green-100', text: 'text-green-500' },
+    yellow: { bg: 'bg-yellow-100', text: 'text-yellow-500' },
+    orange: { bg: 'bg-orange-100', text: 'text-orange-500' },
+    red: { bg: 'bg-red-100', text: 'text-red-500' },
+    blue: { bg: 'bg-blue-100', text: 'text-blue-500' },
+    purple: { bg: 'bg-purple-100', text: 'text-purple-500' }
+  };
+  const { bg, text: txt } = colorMap[color] || colorMap.green;
+  return (
+    <div className="flex items-start">
+      <div className={`${bg} p-1 rounded-full mr-2 mt-1`}>
+        <AlertCircle className={`w-4 h-4 ${txt}`} />
+      </div>
+      <p className="text-gray-700 text-sm">{text}</p>
     </div>
-    <p className="text-gray-700 text-sm">{text}</p>
-  </div>
-);
+  );
+};
 
 export default Dashboard;
