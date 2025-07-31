@@ -11,7 +11,6 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from django.conf import settings
 
-# Add simulation and prediction directories to Python path
 BASE_DIR = Path(settings.BASE_DIR)
 SIMULATION_DIR = BASE_DIR.parent / 'simulation'
 PREDICTION_DIR = BASE_DIR.parent / 'prediction'
@@ -22,17 +21,14 @@ if str(SIMULATION_DIR) not in sys.path:
 if str(PREDICTION_DIR) not in sys.path:
     sys.path.append(str(PREDICTION_DIR))
 
-# Import from simulation directory - use the class-based implementation
 try:
     from AQI_Calculator import AQICalculator
 except ImportError as e:
     print(f"Error importing AQI_Calculator: {e}")
-    # No fallback needed since we'll handle this in the AQICalculatorService
 
 class WeatherService:
     @staticmethod
     def geocode_location(location):
-        """Convert location name to coordinates"""
         try:
             api_key = settings.OPENWEATHER_API_KEY
             url = f"http://api.openweathermap.org/geo/1.0/direct?q={location}&limit=1&appid={api_key}"
@@ -47,7 +43,6 @@ class WeatherService:
 
     @staticmethod
     def get_air_quality_data(lat, lon):
-        """Fetch air quality data from OpenWeatherMap API"""
         try:
             api_key = settings.OPENWEATHER_API_KEY
             url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={api_key}"
@@ -69,7 +64,6 @@ class WeatherService:
 
     @staticmethod
     def get_weather_data(lat, lon):
-        """Fetch weather data from OpenWeatherMap API"""
         try:
             api_key = settings.OPENWEATHER_API_KEY
             url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
@@ -82,12 +76,6 @@ class WeatherService:
 
     @staticmethod
     def get_additional_weather_features(lat, lon):
-        """
-        Fetch additional weather features from Open-Meteo or other APIs.
-        This is a stub. You must implement actual calls if you want more features.
-        """
-        # Example request (Open-Meteo, Tomorrow.io, etc.) - customize as needed.
-        # For now, return dummy values.
         return {
             'dew_point_2m (°C)': 0,
             'apparent_temperature (°C)': 0,
@@ -118,7 +106,6 @@ class WeatherService:
 class WeatherPredictionModel:
     @staticmethod
     def predict_weather(current_weather, days_ahead):
-        """Simple weather prediction model"""
         predictions = []
         current_temp = current_weather['main']['temp']
         current_humidity = current_weather['main']['humidity']
@@ -154,10 +141,9 @@ class WeatherPredictionModel:
 
 class AQICalculatorService:
     _calculator = None
-    
+
     @classmethod
     def get_calculator(cls):
-        """Get or create AQI calculator instance"""
         if cls._calculator is None:
             try:
                 cls._calculator = AQICalculator()
@@ -199,10 +185,9 @@ class AQICalculatorService:
                             return {'category': 'Hazardous', 'color': 'Maroon'}
                 cls._calculator = MinimalAQICalculator()
         return cls._calculator
-    
+
     @staticmethod
     def read_sensor_data(use_simulated=True):
-        """Read sensor data from simulation files or real sensors"""
         try:
             data = {}
             if use_simulated:
@@ -231,7 +216,7 @@ class AQICalculatorService:
                             data['humidity'] = bme_data.get('humidity')
                             data['pressure'] = bme_data.get('pressure')
             else:
-                pass # In production, implement real sensor reading here
+                pass
             data['timestamp'] = datetime.now().isoformat()
             return data
         except Exception as e:
@@ -244,13 +229,12 @@ class AQICalculatorService:
                 'pressure': 1013.0,
                 'timestamp': datetime.now().isoformat()
             }
-    
+
     @staticmethod
     def read_real_sensor_data(serial_port='/dev/ttyUSB0', baudrate=9600, timeout=2):
-        """Read air quality data from real hardware sensor (Arduino)"""
         try:
             ser = serial.Serial(serial_port, baudrate, timeout=timeout)
-            time.sleep(2)  # Wait for Arduino to reset
+            time.sleep(2)
             line = ser.readline().decode(errors='ignore').strip()
             ser.close()
             match = re.findall(r"PM1\.0:\s*(\d+)\s*µg/m3\s*\|\s*PM2\.5:\s*(\d+)\s*µg/m3\s*\|\s*PM10:\s*(\d+)\s*µg/m3", line)
@@ -268,7 +252,6 @@ class AQICalculatorService:
 
     @classmethod
     def calculate_aqi_from_data(cls, sensor_data):
-        """Calculate AQI using data from sensors"""
         try:
             calculator = cls.get_calculator()
             pm25 = float(sensor_data.get('pm25', 0))
@@ -298,7 +281,6 @@ class AQICalculatorService:
 class PredictionService:
     @staticmethod
     def get_available_models():
-        """Get list of available prediction models"""
         models = []
         for file in PREDICTION_DIR.glob('*.pkl'):
             if file.name.endswith('_model.pkl'):
@@ -306,10 +288,10 @@ class PredictionService:
         return models
 
     @staticmethod
-    def fetch_full_feature_set(lat, lon, previous_aqi=0):
+    def fetch_full_feature_set(lat, lon, previous_aqi=0, hours_ahead=24):
         """
         Fetch and compile all 31 features for AQI prediction.
-        Uses OpenWeatherMap for basic features and a stub for additional features.
+        Optionally adjust features for hours_ahead (stub: same features for each day).
         """
         features = {
             'temperature_2m (°C)': 0, 'relative_humidity_2m (%)': 0, 'dew_point_2m (°C)': 0,
@@ -326,7 +308,6 @@ class PredictionService:
             'soil_moisture_7_to_28cm (m³/m³)': 0, 'soil_moisture_28_to_100cm (m³/m³)': 0,
             'soil_moisture_100_to_255cm (m³/m³)': 0, 'prev_us_aqi': previous_aqi
         }
-        # Get OpenWeatherMap weather
         weather = WeatherService.get_weather_data(lat, lon)
         if weather:
             main = weather.get('main', {})
@@ -345,16 +326,17 @@ class PredictionService:
             features['rain (mm)'] = rain.get('1h', 0)
             features['snowfall (cm)'] = snow.get('1h', 0)
             features['weather_code (wmo code)'] = weather_code
-        # Get additional features (stub: returns zeros, implement actual API as needed)
         additional = WeatherService.get_additional_weather_features(lat, lon)
         for k, v in additional.items():
             features[k] = v
+        # Optionally adjust features for hours_ahead (if you have time-series forecasting)
+        features['hours_ahead'] = hours_ahead
         return features
 
     @staticmethod
-    def predict_aqi_from_features(features, model_name='ridge_model.pkl'):
+    def predict_aqi_from_features(features, model_name='ridge_model.pkl', hours_ahead=24):
         """
-        Predict AQI using precompiled full feature set.
+        Predict AQI using features for the specified prediction horizon.
         """
         try:
             model_path = PREDICTION_DIR / model_name
@@ -373,16 +355,35 @@ class PredictionService:
                 'soil_temperature_28_to_100cm (°C)', 'soil_temperature_100_to_255cm (°C)',
                 'soil_moisture_0_to_7cm (m³/m³)', 'soil_moisture_7_to_28cm (m³/m³)',
                 'soil_moisture_28_to_100cm (m³/m³)', 'soil_moisture_100_to_255cm (m³/m³)',
-                'prev_us_aqi'
+                'prev_us_aqi', 'hours_ahead'
             ]
             X = np.array([features[name] for name in feature_names]).reshape(1, -1)
             prediction = model.predict(X)[0]
             return {
-                'predicted_aqi_24h': float(prediction),
-                'model_used': model_name
+                f'predicted_aqi_{hours_ahead}h': float(prediction),
+                'model_used': model_name,
+                'hours_ahead': hours_ahead
             }
         except Exception as e:
             import traceback
             print(f"Error predicting with {model_name}: {str(e)}")
             print(traceback.format_exc())
             return {'error': str(e)}
+
+    @staticmethod
+    def predict_aqi_7_days(lat, lon, previous_aqi=0, model_name='svr_model.pkl'):
+        """
+        Predict AQI for each 24h interval up to 7 days ahead.
+        Returns a list of predictions for [24, 48, ..., 168] hours.
+        """
+        predictions = []
+        for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
+            features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=previous_aqi, hours_ahead=hours_ahead)
+            prediction = PredictionService.predict_aqi_from_features(features, model_name=model_name, hours_ahead=hours_ahead)
+            predictions.append({
+                "hours_ahead": hours_ahead,
+                "predicted_aqi": prediction.get(f'predicted_aqi_{hours_ahead}h', prediction.get('predicted_aqi_24h', None)),
+                "model_used": prediction.get("model_used", model_name),
+                "confidence": prediction.get("confidence", None)
+            })
+        return predictions
