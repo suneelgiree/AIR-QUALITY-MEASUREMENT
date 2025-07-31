@@ -288,10 +288,9 @@ class PredictionService:
         return models
 
     @staticmethod
-    def fetch_full_feature_set(lat, lon, previous_aqi=0, hours_ahead=24):
+    def fetch_full_feature_set(lat, lon, previous_aqi=0):
         """
         Fetch and compile all 31 features for AQI prediction.
-        Optionally adjust features for hours_ahead (stub: same features for each day).
         """
         features = {
             'temperature_2m (°C)': 0, 'relative_humidity_2m (%)': 0, 'dew_point_2m (°C)': 0,
@@ -329,14 +328,13 @@ class PredictionService:
         additional = WeatherService.get_additional_weather_features(lat, lon)
         for k, v in additional.items():
             features[k] = v
-        # Optionally adjust features for hours_ahead (if you have time-series forecasting)
-        features['hours_ahead'] = hours_ahead
         return features
 
     @staticmethod
-    def predict_aqi_from_features(features, model_name='ridge_model.pkl', hours_ahead=24):
+    def predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=24):
         """
-        Predict AQI using features for the specified prediction horizon.
+        Predict AQI using precompiled full feature set.
+        Only pass the features your model was trained with (typically 31 features).
         """
         try:
             model_path = PREDICTION_DIR / model_name
@@ -344,6 +342,7 @@ class PredictionService:
                 print(f"Model file not found: {model_path}")
                 return {'error': f"Model not found: {model_name}"}
             model = joblib.load(model_path)
+            # Only pass features expected by the model (exclude hours_ahead!)
             feature_names = [
                 'temperature_2m (°C)', 'relative_humidity_2m (%)', 'dew_point_2m (°C)', 'apparent_temperature (°C)',
                 'precipitation (mm)', 'rain (mm)', 'snowfall (cm)', 'snow_depth (m)',
@@ -355,7 +354,7 @@ class PredictionService:
                 'soil_temperature_28_to_100cm (°C)', 'soil_temperature_100_to_255cm (°C)',
                 'soil_moisture_0_to_7cm (m³/m³)', 'soil_moisture_7_to_28cm (m³/m³)',
                 'soil_moisture_28_to_100cm (m³/m³)', 'soil_moisture_100_to_255cm (m³/m³)',
-                'prev_us_aqi', 'hours_ahead'
+                'prev_us_aqi'
             ]
             X = np.array([features[name] for name in feature_names]).reshape(1, -1)
             prediction = model.predict(X)[0]
@@ -378,11 +377,12 @@ class PredictionService:
         """
         predictions = []
         for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
-            features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=previous_aqi, hours_ahead=hours_ahead)
+            features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=previous_aqi)
             prediction = PredictionService.predict_aqi_from_features(features, model_name=model_name, hours_ahead=hours_ahead)
+            predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', None)
             predictions.append({
                 "hours_ahead": hours_ahead,
-                "predicted_aqi": prediction.get(f'predicted_aqi_{hours_ahead}h', prediction.get('predicted_aqi_24h', None)),
+                "predicted_aqi": predicted_aqi_val,
                 "model_used": prediction.get("model_used", model_name),
                 "confidence": prediction.get("confidence", None)
             })

@@ -33,6 +33,8 @@ INSTALLED_APPS = [
     'authentication',
     'weather_prediction',
     'air_quality',
+    'sensor',
+    'utils',
 ]
 
 MIDDLEWARE = [

@@ -6,4 +6,5 @@ urlpatterns = [
     path('api/auth/', include('authentication.urls')),
     path('api/air-quality/', include('air_quality.urls')),
     path('api/weather/', include('weather_prediction.urls')),
+    path('sensor/', include('sensor.urls')),
 ]

@@ -41,21 +41,20 @@ def update_air_quality(request):
 
     # Add prediction capability to existing view
     try:
-        # Get previous AQI for user if available
         previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
         previous_aqi = previous_record.aqi if previous_record else 0
 
-        # Prepare full feature set for prediction
-        features = PredictionService.fetch_full_feature_set(user.latitude, user.longitude, previous_aqi=previous_aqi)
-        # Now predict for 7 days (24h increments)
+        # 7-day predictions
         predictions = []
         for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
-            pred = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=hours_ahead)
+            features = PredictionService.fetch_full_feature_set(user.latitude, user.longitude, previous_aqi=previous_aqi)
+            prediction = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=hours_ahead)
+            predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', prediction.get('predicted_aqi_24h', None))
             predictions.append({
                 "hours_ahead": hours_ahead,
-                "predicted_aqi": pred.get('predicted_aqi', pred.get('predicted_aqi_24h', None)),
+                "predicted_aqi": predicted_aqi_val,
                 "model_used": "svr_model.pkl",
-                "confidence": pred.get('confidence', None)
+                "confidence": prediction.get('confidence', None)
             })
         air_quality['predictions'] = predictions
     except Exception as e:
@@ -114,7 +113,6 @@ class AirQualityUpdateView(APIView):
                 }
                 data_source = 'OpenWeatherMap API'
             elif use_real_sensor:
-                # Read from real hardware sensor
                 sensor_data = AQICalculatorService.read_real_sensor_data()
                 if not sensor_data:
                     return Response({'error': 'Failed to read from real sensor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -122,7 +120,6 @@ class AirQualityUpdateView(APIView):
                 aqi_data['location'] = user.location
                 data_source = 'Real Sensor'
             else:
-                # Use simulation data
                 sensor_data = AQICalculatorService.read_sensor_data(use_simulated=True)
                 aqi_data = AQICalculatorService.calculate_aqi_from_data(sensor_data)
                 aqi_data['location'] = user.location
@@ -140,28 +137,32 @@ class AirQualityUpdateView(APIView):
                 location=aqi_data.get('location', 'Unknown')
             )
 
-            # Predict AQI for next 7 days in 24h increments using SVR model
             previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
             previous_aqi = previous_record.aqi if previous_record else 0
             lat = getattr(user, 'latitude', None)
             lon = getattr(user, 'longitude', None)
-            features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=previous_aqi)
 
             predictions = []
             for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
-                pred = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=hours_ahead)
-                AQIPrediction.objects.create(
-                    air_quality_record=record,
-                    hours_ahead=hours_ahead,
-                    predicted_aqi=pred.get('predicted_aqi', pred.get('predicted_aqi_24h', None)),
-                    model_used="svr_model.pkl"
-                )
+                features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=previous_aqi)
+                prediction = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=hours_ahead)
+                predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', prediction.get('predicted_aqi_24h', None))
                 predictions.append({
                     "hours_ahead": hours_ahead,
-                    "predicted_aqi": pred.get('predicted_aqi', pred.get('predicted_aqi_24h', None)),
+                    "predicted_aqi": predicted_aqi_val,
                     "model_used": "svr_model.pkl",
-                    "confidence": pred.get('confidence', None)
+                    "confidence": prediction.get('confidence', None)
                 })
+                # Save only if valid
+                if predicted_aqi_val is not None and not isinstance(predicted_aqi_val, str):
+                    AQIPrediction.objects.create(
+                        air_quality_record=record,
+                        hours_ahead=hours_ahead,
+                        predicted_aqi=predicted_aqi_val,
+                        model_used="svr_model.pkl"
+                    )
+                else:
+                    logger.error(f"Skipping AQIPrediction save for hours_ahead={hours_ahead}: invalid value {predicted_aqi_val}")
 
             response_data = {
                 **aqi_data,
