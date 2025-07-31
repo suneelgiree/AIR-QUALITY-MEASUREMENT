@@ -34,11 +34,40 @@ def update_air_quality(request):
             'error': 'User location not available'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    air_quality = WeatherService.get_air_quality_data(user.latitude, user.longitude)
-    if not air_quality:
+    # Get air quality from OpenWeatherMap and calculate AQI from PM2.5/PM10
+    air_quality_raw = WeatherService.get_air_quality_data(user.latitude, user.longitude)
+    if not air_quality_raw:
         return Response({
             'error': 'Failed to fetch air quality data'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Prepare sensor data for AQI calculation
+    sensor_data = {
+        'pm25': air_quality_raw['pm25'],
+        'pm10': air_quality_raw['pm10'],
+    }
+    weather = WeatherService.get_weather_data(user.latitude, user.longitude)
+    if weather:
+        sensor_data['temperature'] = weather['main'].get('temp')
+        sensor_data['humidity'] = weather['main'].get('humidity')
+        sensor_data['pressure'] = weather['main'].get('pressure')
+
+    # Calculate AQI using AQICalculatorService
+    calculated_aqi_data = AQICalculatorService.calculate_aqi_from_data(sensor_data)
+    air_quality = {
+        'aqi': calculated_aqi_data['aqi'],
+        'pm25': air_quality_raw['pm25'],
+        'pm10': air_quality_raw['pm10'],
+        'co': air_quality_raw.get('co'),
+        'no2': air_quality_raw.get('no2'),
+        'so2': air_quality_raw.get('so2'),
+        'o3': air_quality_raw.get('o3'),
+        'category': calculated_aqi_data.get('category', 'Unknown'),
+        'temperature': sensor_data.get('temperature'),
+        'humidity': sensor_data.get('humidity'),
+        'pressure': sensor_data.get('pressure'),
+        'location': user.location
+    }
 
     record = AirQualityData.objects.create(
         user=user,
@@ -116,23 +145,24 @@ class AirQualityUpdateView(APIView):
             if use_api:
                 if not user.latitude or not user.longitude:
                     return Response({'error': 'User location not available'}, status=status.HTTP_400_BAD_REQUEST)
-                air_quality = WeatherService.get_air_quality_data(user.latitude, user.longitude)
-                if not air_quality:
+                air_quality_raw = WeatherService.get_air_quality_data(user.latitude, user.longitude)
+                if not air_quality_raw:
                     return Response({'error': 'Failed to fetch air quality data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 sensor_data = {
-                    'pm25': air_quality['pm25'],
-                    'pm10': air_quality['pm10'],
+                    'pm25': air_quality_raw['pm25'],
+                    'pm10': air_quality_raw['pm10'],
                 }
                 weather = WeatherService.get_weather_data(user.latitude, user.longitude)
                 if weather:
                     sensor_data['temperature'] = weather['main'].get('temp')
                     sensor_data['humidity'] = weather['main'].get('humidity')
                     sensor_data['pressure'] = weather['main'].get('pressure')
+                calculated_aqi_data = AQICalculatorService.calculate_aqi_from_data(sensor_data)
                 aqi_data = {
-                    'aqi': air_quality['aqi'],
-                    'pm25': air_quality['pm25'],
-                    'pm10': air_quality['pm10'],
-                    'category': 'Unknown',
+                    'aqi': calculated_aqi_data['aqi'],
+                    'pm25': air_quality_raw['pm25'],
+                    'pm10': air_quality_raw['pm10'],
+                    'category': calculated_aqi_data.get('category', 'Unknown'),
                     'temperature': sensor_data.get('temperature'),
                     'humidity': sensor_data.get('humidity'),
                     'pressure': sensor_data.get('pressure'),
@@ -147,7 +177,6 @@ class AirQualityUpdateView(APIView):
                 aqi_data['location'] = user.location
                 data_source = 'Real Sensor'
             else:
-                # Simulation removed: only use API or real sensor
                 return Response({'error': 'No valid AQI data source selected (simulation disabled)'}, status=status.HTTP_400_BAD_REQUEST)
 
             record = AirQualityRecord.objects.create(
