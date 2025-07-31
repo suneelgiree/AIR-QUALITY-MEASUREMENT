@@ -1,13 +1,17 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 import logging
+import json
+import csv
+from io import StringIO
 
 from .models import AirQualityData, AirQualityRecord, AQIPrediction
 from .serializers import AirQualityDataSerializer, AirQualityRecordSerializer
 from utils.services import WeatherService, AQICalculatorService, PredictionService
+from authentication.models import CustomUser
 
 logger = logging.getLogger(__name__)
 
@@ -210,3 +214,77 @@ class AirQualityDashboardView(APIView):
                 {"error": "Failed to retrieve dashboard data", "detail": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class SensorFileUploadView(APIView):
+    permission_classes = [AllowAny]  # Change to IsAuthenticated if you want to secure the endpoint
+
+    def post(self, request):
+        """
+        Accept sensor logs (JSON or CSV) uploaded from device/cloud.
+        Expected payload:
+          - filename (.json or .csv)
+          - timestamp (when generated)
+          - data (file content as string)
+          - location (optional: device/location name)
+        """
+        filename = request.data.get('filename')
+        timestamp = request.data.get('timestamp')
+        data = request.data.get('data')
+        device_location = request.data.get('location', 'Unknown')
+
+        if not filename or not data:
+            return Response({'error': 'Missing filename or data.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        records_created = 0
+
+        try:
+            # Use a default/system user for sensor uploads, or map device_id to user
+            user = CustomUser.objects.first()
+
+            if filename.endswith('.json'):
+                sensor_data = json.loads(data)
+                if isinstance(sensor_data, dict):
+                    sensor_data = [sensor_data]
+                for entry in sensor_data:
+                    AirQualityRecord.objects.create(
+                        user=user,
+                        aqi=entry.get('overall_aqi', 0),
+                        pm25=entry.get('concentrations', {}).get('PM2.5', 0),
+                        pm10=entry.get('concentrations', {}).get('PM10', 0),
+                        temperature=None,
+                        humidity=None,
+                        pressure=None,
+                        category=entry.get('category_info', {}).get('category', 'Unknown'),
+                        location=device_location,
+                        timestamp=timestamp or None  # Or entry['timestamp'] if available
+                    )
+                    records_created += 1
+
+            elif filename.endswith('.csv'):
+                reader = csv.reader(StringIO(data))
+                for row in reader:
+                    # Example: timestamp, pm1, pm25, pm10, aqi, dom_pollutant, dom_conc
+                    if len(row) < 7:
+                        continue
+                    AirQualityRecord.objects.create(
+                        user=user,
+                        aqi=row[4],
+                        pm25=row[2],
+                        pm10=row[3],
+                        temperature=None,
+                        humidity=None,
+                        pressure=None,
+                        category=row[5],
+                        location=device_location,
+                        timestamp=row[0]
+                    )
+                    records_created += 1
+
+            return Response({
+                'message': f"{records_created} records ingested from {filename}.",
+                'filename': filename,
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Error ingesting sensor file: {str(e)}", exc_info=True)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
