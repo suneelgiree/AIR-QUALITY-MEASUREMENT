@@ -4,89 +4,59 @@ import { Link, useNavigate } from 'react-router-dom';
 import airQualityService from '../services/api/airQuality';
 import AirQualityCard from '../components/AirQualityCard';
 
+// Helper to decide if sensor AQI is valid
+const isSensorAqiValid = (sensorData) =>
+  typeof sensorData.aqi === "number" && sensorData.aqi > 10; // Use >10 as threshold for realistic values
+
+// Defensive AQI extraction for live AQI
+const extractAQI = (data) =>
+  typeof data.aqi === "number" && data.aqi > 0
+    ? data.aqi
+    : typeof data.overall_aqi === "number" && data.overall_aqi > 0
+      ? data.overall_aqi
+      : null;
+
+const getAqiCategory = (aqi) => {
+  if (aqi <= 50) return 'Good';
+  if (aqi <= 100) return 'Moderate';
+  if (aqi <= 150) return 'Unhealthy for Sensitive Groups';
+  if (aqi <= 200) return 'Unhealthy';
+  if (aqi <= 300) return 'Very Unhealthy';
+  return 'Hazardous';
+};
+
 const Dashboard = () => {
   const [accountMenu, setAccountMenu] = useState(false);
   const navigate = useNavigate();
 
-  const [airQualityData, setAirQualityData] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // SVR predicted AQI state
-  const [svrPrediction, setSVRPrediction] = useState(null);
-  const [predictionLoading, setPredictionLoading] = useState(false);
-  const [predictionError, setPredictionError] = useState(null);
-
-  const [userInfo, setUserInfo] = useState(null);
-
   const isLoggedIn = Boolean(localStorage.getItem('access_token'));
+  const [userInfo, setUserInfo] = useState(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUserInfo(JSON.parse(storedUser));
     }
-
-    loadAirQualityData();
-    loadSVRPrediction();
+    loadDashboardData();
   }, []);
 
-  const loadAirQualityData = async () => {
+  const loadDashboardData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const historyData = await airQualityService.getHistory();
-      if (historyData && historyData.length > 0) {
-        setAirQualityData(historyData[0]);
-      } else {
-        const response = await airQualityService.updateAirQuality();
-        setAirQualityData(response);
-      }
+      const data = await airQualityService.getDashboard();
+      setDashboardData(data);
     } catch (err) {
-      console.error('Failed to fetch air quality data:', err);
       setError(
         err?.response?.data?.error ||
-        'Unable to load air quality information. Please try again later.'
+        'Unable to load dashboard data. Please try again later.'
       );
     } finally {
       setLoading(false);
-    }
-  };
-
-  const updateAirQuality = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await airQualityService.updateAirQuality();
-      setAirQualityData(response);
-    } catch (err) {
-      console.error('Failed to update air quality:', err);
-      setError(
-        err?.response?.data?.error ||
-        'Unable to update air quality information. Please try again later.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // SVR predicted AQI loading
-  const loadSVRPrediction = async () => {
-    setPredictionLoading(true);
-    setPredictionError(null);
-    try {
-      const data = await airQualityService.getSVRPrediction();
-      console.log('SVR Prediction API response:', data);
-      // The API returns a single predicted value object, not an array
-      setSVRPrediction(data);
-    } catch (err) {
-      console.error('Failed to fetch SVR prediction:', err);
-      setPredictionError(
-        err?.response?.data?.error ||
-        'Unable to load predicted AQI. Please try again later.'
-      );
-    } finally {
-      setPredictionLoading(false);
     }
   };
 
@@ -98,6 +68,26 @@ const Dashboard = () => {
   };
 
   const accountName = userInfo?.full_name || 'User';
+
+  // Backend fields
+  const sensorData = dashboardData?.current?.sensor_data || {};
+  const apiData = dashboardData?.current?.api_data || {};
+
+  // Use sensor data only if it's valid, otherwise fallback to api data
+  const displayData = isSensorAqiValid(sensorData) ? sensorData : apiData;
+
+  const liveAqi = extractAQI(displayData);
+
+  // For prediction, use sensorData.predictions, fallback empty
+  const predictions = sensorData?.predictions || [];
+  const next24hrPrediction = predictions.find(p => p.hours_ahead === 24);
+
+  // For history chart, use sensor history
+  const historyData = dashboardData?.history?.sensor_data || [];
+
+  const refreshAll = () => {
+    loadDashboardData();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-green-50 to-green-200">
@@ -113,7 +103,6 @@ const Dashboard = () => {
           <Link to="/aqi" className="text-blue-800 hover:text-green-600 font-medium transition-colors">AQI</Link>
           <Link to="/forecasting" className="text-blue-800 hover:text-green-600 font-medium transition-colors">Forecasting</Link>
         </div>
-
         <div className="flex items-center bg-blue-50 rounded-lg px-3 py-1 shadow-inner mx-6">
           <Search className="w-5 h-5 text-blue-400 mr-2" />
           <input
@@ -122,7 +111,6 @@ const Dashboard = () => {
             className="bg-transparent outline-none text-blue-900"
           />
         </div>
-
         <div className="flex items-center space-x-6 relative">
           <button className="p-2 rounded-full hover:bg-blue-100 transition-colors" title="Notifications">
             <Bell className="w-6 h-6 text-blue-800" />
@@ -176,31 +164,37 @@ const Dashboard = () => {
                 </div>
               ) : error ? (
                 <div className="text-red-500 text-sm">{error}</div>
-              ) : airQualityData ? (
+              ) : displayData && Object.keys(displayData).length ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-blue-700">AQI</span>
                     <span className={`font-bold ${
-                      airQualityData.aqi <= 50 ? 'text-green-600' :
-                      airQualityData.aqi <= 100 ? 'text-yellow-600' :
-                      airQualityData.aqi <= 150 ? 'text-orange-600' :
+                      liveAqi <= 50 ? 'text-green-600' :
+                      liveAqi <= 100 ? 'text-yellow-600' :
+                      liveAqi <= 150 ? 'text-orange-600' :
                       'text-red-600'
                     }`}>
-                      {airQualityData.aqi}
+                      {liveAqi ?? "N/A"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-blue-700">PM2.5</span>
-                    <span className="font-bold text-blue-700">{airQualityData.pm25} μg/m³</span>
+                    <span className="font-bold text-blue-700">
+                      {typeof displayData.pm25 !== "undefined"
+                        ? displayData.pm25
+                        : (displayData.concentrations && displayData.concentrations["PM2.5"])
+                          ? displayData.concentrations["PM2.5"]
+                          : "N/A"} μg/m³
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-blue-700">Location</span>
-                    <span className="font-bold text-blue-500">{airQualityData.location}</span>
+                    <span className="font-bold text-blue-500">{displayData.location || displayData.device_location || 'Unknown'}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-blue-700">Updated</span>
                     <span className="font-bold text-blue-400">
-                      {new Date(airQualityData.timestamp).toLocaleTimeString()}
+                      {displayData.timestamp ? new Date(displayData.timestamp).toLocaleTimeString() : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -209,7 +203,7 @@ const Dashboard = () => {
               )}
 
               <button
-                onClick={updateAirQuality}
+                onClick={refreshAll}
                 className="mt-6 w-full bg-gradient-to-r from-blue-400 to-green-500 text-white rounded-full py-1 font-semibold shadow hover:from-blue-500 hover:to-green-600 transition hover:scale-105 flex items-center justify-center"
                 disabled={loading}
               >
@@ -224,52 +218,40 @@ const Dashboard = () => {
                 <span>SVR Predicted AQI</span>
                 <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">Model</span>
               </div>
-              {predictionLoading ? (
+              {loading ? (
                 <div className="animate-pulse space-y-3">
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                   <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                 </div>
-              ) : predictionError ? (
-                <div className="text-red-500 text-sm">{predictionError}</div>
-              ) : svrPrediction ? (
+              ) : next24hrPrediction ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-purple-700">Predicted AQI</span>
                     <span className={`font-bold ${
-                      svrPrediction.aqi <= 50 ? 'text-green-600' :
-                      svrPrediction.aqi <= 100 ? 'text-yellow-600' :
-                      svrPrediction.aqi <= 150 ? 'text-orange-600' :
+                      next24hrPrediction.predicted_aqi <= 50 ? 'text-green-600' :
+                      next24hrPrediction.predicted_aqi <= 100 ? 'text-yellow-600' :
+                      next24hrPrediction.predicted_aqi <= 150 ? 'text-orange-600' :
                       'text-red-600'
                     }`}>
-                      {svrPrediction.aqi}
+                      {next24hrPrediction.predicted_aqi}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-purple-700">PM2.5</span>
-                    <span className="font-bold text-purple-500">{svrPrediction.pm25}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-purple-700">PM10</span>
-                    <span className="font-bold text-purple-500">{svrPrediction.pm10}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-purple-700">Temperature</span>
-                    <span className="font-bold text-purple-500">{svrPrediction.temperature}°C</span>
-                  </div>
-                  <div className="flex items-center justify-between">
                     <span className="text-purple-700">Category</span>
-                    <span className="font-bold text-purple-500">{svrPrediction.category}</span>
+                    <span className="font-bold text-purple-500">
+                      {getAqiCategory(next24hrPrediction.predicted_aqi)}
+                    </span>
                   </div>
                 </div>
               ) : (
                 <p className="text-gray-500">No prediction available</p>
               )}
               <button
-                onClick={loadSVRPrediction}
+                onClick={refreshAll}
                 className="mt-6 w-full bg-gradient-to-r from-purple-400 to-blue-500 text-white rounded-full py-1 font-semibold shadow hover:from-purple-500 hover:to-blue-600 transition hover:scale-105 flex items-center justify-center"
-                disabled={predictionLoading}
+                disabled={loading}
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${predictionLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh Prediction
               </button>
             </div>
@@ -277,28 +259,31 @@ const Dashboard = () => {
 
           {/* Center Column */}
           <div className="lg:col-span-6 space-y-6">
-            <AirQualityCard data={airQualityData} loading={loading} error={error} />
-            {airQualityData && (
+            <AirQualityCard data={displayData} loading={loading} error={error} />
+            {historyData.length > 0 && (
               <div className="bg-white/90 rounded-2xl shadow p-6">
                 <div className="font-semibold text-blue-800 mb-4">Today's AQI Levels</div>
-                <div className="flex items-end gap-2 h-40">
-                  {[airQualityData.aqi - 20, airQualityData.aqi - 10, airQualityData.aqi, airQualityData.aqi + 5, airQualityData.aqi + 10, airQualityData.aqi, airQualityData.aqi - 5].map((val, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center group">
-                      <div
-                        className={`w-4 rounded-t transition-all group-hover:scale-110 group-hover:shadow-lg ${
-                          val <= 50 ? 'bg-green-400' :
-                          val <= 100 ? 'bg-yellow-400' :
-                          val <= 150 ? 'bg-orange-400' :
-                          'bg-red-500'
-                        }`}
-                        style={{ height: `${Math.max(20, val / 2)}px` }}
-                        title={`AQI: ${val}`}
-                      ></div>
-                      <span className="text-[10px] text-gray-500 mt-1">
-                        {(new Date().getHours() + i - 3 + 24) % 24}:00
-                      </span>
-                    </div>
-                  ))}
+                <div className="flex items-end gap-2 h-40 overflow-x-auto">
+                  {historyData.map((item, i) => {
+                    const barAqi = extractAQI(item);
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center group">
+                        <div
+                          className={`w-4 rounded-t transition-all group-hover:scale-110 group-hover:shadow-lg ${
+                            barAqi <= 50 ? 'bg-green-400' :
+                            barAqi <= 100 ? 'bg-yellow-400' :
+                            barAqi <= 150 ? 'bg-orange-400' :
+                            'bg-red-500'
+                          }`}
+                          style={{ height: `${Math.max(20, barAqi / 2)}px` }}
+                          title={`AQI: ${barAqi}`}
+                        ></div>
+                        <span className="text-[10px] text-gray-500 mt-1">
+                          {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -316,18 +301,18 @@ const Dashboard = () => {
                 </div>
               ) : error ? (
                 <div className="text-red-600">Unable to provide recommendations</div>
-              ) : airQualityData ? (
+              ) : displayData && Object.keys(displayData).length ? (
                 <div className="space-y-4">
-                  {airQualityData.aqi <= 50 && (
+                  {liveAqi <= 50 && (
                     <Tip color="green" text="Air quality is good. It's a great day for outdoor activities!" />
                   )}
-                  {airQualityData.aqi > 50 && airQualityData.aqi <= 100 && (
+                  {liveAqi > 50 && liveAqi <= 100 && (
                     <Tip color="yellow" text="Air quality is moderate. Sensitive individuals should consider limiting prolonged outdoor exertion." />
                   )}
-                  {airQualityData.aqi > 100 && airQualityData.aqi <= 150 && (
+                  {liveAqi > 100 && liveAqi <= 150 && (
                     <Tip color="orange" text="Air quality is unhealthy for sensitive groups. Children and older adults should limit outdoor exertion." />
                   )}
-                  {airQualityData.aqi > 150 && (
+                  {liveAqi > 150 && (
                     <Tip color="red" text="Air quality is unhealthy. Reduce time spent outdoors and consider wearing a mask when outside." />
                   )}
                 </div>

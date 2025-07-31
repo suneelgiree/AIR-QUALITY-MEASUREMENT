@@ -1,6 +1,24 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+// Defensive extraction helper for AQI and PM2.5
+const extractAQI = (item) =>
+  typeof item.aqi === "number"
+    ? item.aqi
+    : typeof item.overall_aqi === "number"
+      ? item.overall_aqi
+      : null;
+
+const extractPM25 = (item) =>
+  typeof item.pm25 !== "undefined"
+    ? item.pm25
+    : item.concentrations && typeof item.concentrations["PM2.5"] !== "undefined"
+      ? item.concentrations["PM2.5"]
+      : null;
+
+const extractTimestamp = (item) =>
+  item.timestamp || item.created_at || null;
+
 const AirQualityHistory = ({ data, loading, error }) => {
   if (loading) {
     return (
@@ -29,12 +47,15 @@ const AirQualityHistory = ({ data, loading, error }) => {
     );
   }
   
-  // Format data for chart
-  const chartData = data.map(item => ({
-    date: new Date(item.timestamp).toLocaleDateString(),
-    aqi: item.aqi,
-    pm25: item.pm25,
-  })).reverse();
+  // Format data for chart, supporting both AirQualityRecord and AQILog formats
+  const chartData = data
+    .map(item => ({
+      date: extractTimestamp(item) ? new Date(extractTimestamp(item)).toLocaleDateString() : 'Unknown',
+      aqi: extractAQI(item),
+      pm25: extractPM25(item),
+    }))
+    .filter(item => item.aqi !== null && item.pm25 !== null)
+    .reverse();
   
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">

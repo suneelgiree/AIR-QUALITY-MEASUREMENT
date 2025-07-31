@@ -13,16 +13,20 @@ from .serializers import AirQualityDataSerializer, AirQualityRecordSerializer
 from utils.services import WeatherService, AQICalculatorService, PredictionService
 from authentication.models import CustomUser
 
-# Import AQILog model and serializer
 from sensor.models import AQILog
 from sensor.serializers import AQILogSerializer
 
 logger = logging.getLogger(__name__)
 
+def debug_features(features):
+    logger.info("----- SVR Feature Vector -----")
+    for k, v in features.items():
+        logger.info(f"{k}: {v}")
+    logger.info("------------------------------")
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def update_air_quality(request):
-    """Update air quality data for user's location using OpenWeatherMap API and AQILog for prediction"""
     user = request.user
 
     if not user.latitude or not user.longitude:
@@ -36,31 +40,32 @@ def update_air_quality(request):
             'error': 'Failed to fetch air quality data'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # Create new air quality record
     record = AirQualityData.objects.create(
         user=user,
         location=user.location,
         **air_quality
     )
 
-    # Add prediction capability to existing view, using latest AQILog as feature
     try:
         previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
         previous_aqi = previous_record.aqi if previous_record else 0
 
         latest_aqilog = AQILog.objects.order_by('-timestamp').first()
-        latest_aqilog_aqi = latest_aqilog.overall_aqi if latest_aqilog else previous_aqi
+        latest_aqilog_aqi = getattr(latest_aqilog, "overall_aqi", None)
+        if latest_aqilog_aqi is None or latest_aqilog_aqi == 0:
+            latest_aqilog_aqi = air_quality.get('aqi', previous_aqi)
 
-        # 7-day predictions
         predictions = []
         for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
             features = PredictionService.fetch_full_feature_set(
                 user.latitude, user.longitude, previous_aqi=latest_aqilog_aqi
             )
+            debug_features(features)
             prediction = PredictionService.predict_aqi_from_features(
                 features, model_name='svr_model.pkl', hours_ahead=hours_ahead
             )
             predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', prediction.get('predicted_aqi_24h', None))
+            logger.info(f"SVR Model raw predicted AQI for {hours_ahead}h: {predicted_aqi_val}")
             predictions.append({
                 "hours_ahead": hours_ahead,
                 "predicted_aqi": predicted_aqi_val,
@@ -81,7 +86,6 @@ def update_air_quality(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def air_quality_history(request):
-    """Get air quality history for user from OpenWeatherMap data and AQILog sensor data"""
     history = AirQualityData.objects.filter(user=request.user).order_by('-timestamp')[:30]
     serializer = AirQualityDataSerializer(history, many=True)
     aqilog_history = AQILog.objects.order_by('-timestamp')[:30]
@@ -95,7 +99,6 @@ def air_quality_history(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def aqi_log_history(request):
-    """Get AQILog history for dashboard or prediction (all users)"""
     logs = AQILog.objects.order_by('-timestamp')[:100]
     serializer = AQILogSerializer(logs, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -105,7 +108,6 @@ class AirQualityUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        """Update air quality using sensor data (simulation, API, or real sensor) and return 7-day predictions, using AQILog data if available"""
         try:
             use_api = request.data.get('use_api', False)
             use_real_sensor = request.data.get('use_real_sensor', False)
@@ -145,10 +147,8 @@ class AirQualityUpdateView(APIView):
                 aqi_data['location'] = user.location
                 data_source = 'Real Sensor'
             else:
-                sensor_data = AQICalculatorService.read_sensor_data(use_simulated=True)
-                aqi_data = AQICalculatorService.calculate_aqi_from_data(sensor_data)
-                aqi_data['location'] = user.location
-                data_source = 'Local Sensors (Simulation)'
+                # Simulation removed: only use API or real sensor
+                return Response({'error': 'No valid AQI data source selected (simulation disabled)'}, status=status.HTTP_400_BAD_REQUEST)
 
             record = AirQualityRecord.objects.create(
                 user=user,
@@ -165,24 +165,26 @@ class AirQualityUpdateView(APIView):
             previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
             previous_aqi = previous_record.aqi if previous_record else 0
 
-            # Use AQILog entry for prediction if available
             latest_aqilog = AQILog.objects.order_by('-timestamp').first()
-            latest_aqilog_aqi = latest_aqilog.overall_aqi if latest_aqilog else previous_aqi
+            latest_aqilog_aqi = getattr(latest_aqilog, "overall_aqi", None)
+            if latest_aqilog_aqi is None or latest_aqilog_aqi == 0:
+                latest_aqilog_aqi = aqi_data.get('aqi', previous_aqi)
             lat = getattr(user, 'latitude', None)
             lon = getattr(user, 'longitude', None)
 
             predictions = []
             for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
                 features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=latest_aqilog_aqi)
+                debug_features(features)
                 prediction = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=hours_ahead)
                 predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', prediction.get('predicted_aqi_24h', None))
+                logger.info(f"SVR Model raw predicted AQI for {hours_ahead}h: {predicted_aqi_val}")
                 predictions.append({
                     "hours_ahead": hours_ahead,
                     "predicted_aqi": predicted_aqi_val,
                     "model_used": "svr_model.pkl",
                     "confidence": prediction.get('confidence', None)
                 })
-                # Save only if valid
                 if predicted_aqi_val is not None and not isinstance(predicted_aqi_val, str):
                     AQIPrediction.objects.create(
                         air_quality_record=record,
@@ -213,7 +215,6 @@ class AirQualityHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Get air quality history from local sensor records and AQILog sensor data"""
         try:
             records = AirQualityRecord.objects.filter(user=request.user).order_by('-timestamp')[:100]
             serializer = AirQualityRecordSerializer(records, many=True)
@@ -235,7 +236,6 @@ class AirQualityDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Get comprehensive air quality dashboard data combining API, AirQualityRecord, and AQILog data"""
         try:
             latest_sensor_record = AirQualityRecord.objects.filter(user=request.user).order_by('-timestamp').first()
             sensor_data = AirQualityRecordSerializer(latest_sensor_record).data if latest_sensor_record else None
@@ -249,7 +249,6 @@ class AirQualityDashboardView(APIView):
             api_history = AirQualityData.objects.filter(user=request.user).order_by('-timestamp')[:10]
             api_history_data = AirQualityDataSerializer(api_history, many=True).data
 
-            # AQILog current and history
             latest_aqilog = AQILog.objects.order_by('-timestamp').first()
             aqi_log_data = AQILogSerializer(latest_aqilog).data if latest_aqilog else None
             aqi_log_history = AQILog.objects.order_by('-timestamp')[:10]
@@ -278,17 +277,9 @@ class AirQualityDashboardView(APIView):
 
 
 class SensorFileUploadView(APIView):
-    permission_classes = [AllowAny]  # Change to IsAuthenticated if you want to secure the endpoint
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        """
-        Accept sensor logs (JSON or CSV) uploaded from device/cloud.
-        Expected payload:
-          - filename (.json or .csv)
-          - timestamp (when generated)
-          - data (file content as string)
-          - location (optional: device/location name)
-        """
         filename = request.data.get('filename')
         timestamp = request.data.get('timestamp')
         data = request.data.get('data')
@@ -300,7 +291,6 @@ class SensorFileUploadView(APIView):
         records_created = 0
 
         try:
-            # Use a default/system user for sensor uploads, or map device_id to user
             user = CustomUser.objects.first()
 
             if filename.endswith('.json'):
@@ -325,7 +315,6 @@ class SensorFileUploadView(APIView):
             elif filename.endswith('.csv'):
                 reader = csv.reader(StringIO(data))
                 for row in reader:
-                    # Example: timestamp, pm1, pm25, pm10, aqi, dom_pollutant, dom_conc
                     if len(row) < 7:
                         continue
                     AirQualityRecord.objects.create(

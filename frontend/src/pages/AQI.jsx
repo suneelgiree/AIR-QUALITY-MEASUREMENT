@@ -17,7 +17,7 @@ const AQI = () => {
   const [historyError, setHistoryError] = useState(null);
   const [userInfo, setUserInfo] = useState(null);
 
-  // Predicted AQI state
+  // Predicted AQI state (from predictions array)
   const [predictedAQI, setPredictedAQI] = useState(null);
   const [predictedLoading, setPredictedLoading] = useState(false);
   const [predictedError, setPredictedError] = useState(null);
@@ -39,8 +39,8 @@ const AQI = () => {
     setError(null);
 
     try {
-      // First check if we have history data
-      const history = await airQualityService.getHistory();
+      // Use sensor history endpoint
+      const history = await airQualityService.getSensorHistory();
 
       // Defensive: accept both array and object responses
       let sensorHistory = [];
@@ -51,10 +51,10 @@ const AQI = () => {
       }
 
       if (sensorHistory.length > 0) {
-        // Use the most recent record
+        // Use the most recent record for display
         setAirQualityData(sensorHistory[0]);
       } else {
-        // No history data, try to update
+        // No history data, try to update live
         const response = await airQualityService.updateAirQuality();
         setAirQualityData(response);
       }
@@ -71,7 +71,7 @@ const AQI = () => {
     setHistoryError(null);
 
     try {
-      const history = await airQualityService.getHistory();
+      const history = await airQualityService.getSensorHistory();
       // Defensive: accept both array and object responses
       let sensorHistory = [];
       if (Array.isArray(history)) {
@@ -92,8 +92,12 @@ const AQI = () => {
     setPredictedLoading(true);
     setPredictedError(null);
     try {
-      const data = await airQualityService.getSVRPrediction();
-      setPredictedAQI(data); // expects object: {aqi, pm25, pm10, category, temperature, ...}
+      // Use updateSensor to get prediction response (SVR)
+      const data = await airQualityService.updateSensor({ use_api: true });
+      // data.predictions is an array; show next 24hr prediction if available
+      const predictions = data.predictions || [];
+      const next24hr = predictions.find(p => p.hours_ahead === 24);
+      setPredictedAQI(next24hr || null);
     } catch (err) {
       setPredictedError(
         err?.response?.data?.error ||
@@ -109,12 +113,12 @@ const AQI = () => {
       setLoading(true);
       setError(null);
 
+      // Update live AQI from OpenWeatherMap
       const response = await airQualityService.updateAirQuality();
       setAirQualityData(response);
 
-      // Refresh history data too
+      // Refresh history and prediction too
       fetchHistoryData();
-      // Refresh predicted AQI too
       fetchPredictedAQI();
     } catch (err) {
       setError('Failed to update air quality data.');
@@ -142,7 +146,6 @@ const AQI = () => {
 
   const getChartData = () => {
     if (!Array.isArray(historyData) || historyData.length === 0) return [];
-    // Convert history data to a format suitable for the chart
     // Defensive: only use items with aqi value! (for AQILog: 'overall_aqi', for AirQualityRecord: 'aqi')
     return historyData
       .filter(item => typeof item.aqi === "number" || typeof item.overall_aqi === "number")
@@ -154,7 +157,7 @@ const AQI = () => {
   const accountName = userInfo?.full_name || "User";
   const chartData = getChartData();
   const aqiStatus = airQualityData ? getAqiLabel(airQualityData.aqi ?? airQualityData.overall_aqi) : { label: 'LOADING', color: 'bg-gray-400 text-white' };
-  const predictedStatus = predictedAQI ? getAqiLabel(predictedAQI.aqi) : { label: 'PREDICTING', color: 'bg-gray-400 text-white' };
+  const predictedStatus = predictedAQI ? getAqiLabel(predictedAQI.predicted_aqi) : { label: 'PREDICTING', color: 'bg-gray-400 text-white' };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-100 via-blue-50 to-green-200">
@@ -235,7 +238,7 @@ const AQI = () => {
                       <>
                         <div className="text-sm text-gray-700 mb-1">PM2.5: {airQualityData.pm25 ?? airQualityData.concentrations?.['PM2.5']} μg/m³</div>
                         <div className="text-xs text-gray-500">Location: {airQualityData.location ?? airQualityData.device_location ?? 'Unknown'}</div>
-                        <div className="text-xs text-gray-500">Last updated: {new Date(airQualityData.timestamp).toLocaleTimeString()}</div>
+                        <div className="text-xs text-gray-500">Last updated: {airQualityData.timestamp ? new Date(airQualityData.timestamp).toLocaleTimeString() : '—'}</div>
                       </>
                     ) : loading ? (
                       <div className="text-sm text-gray-500">Loading data...</div>
@@ -342,7 +345,7 @@ const AQI = () => {
                     <div className="text-right">
                       <div className="font-semibold text-green-900">{airQualityData.location ?? airQualityData.device_location ?? 'Unknown'}</div>
                       <div className="text-xs text-gray-700">
-                        Last Updated: {new Date(airQualityData.timestamp).toLocaleString()}
+                        Last Updated: {airQualityData.timestamp ? new Date(airQualityData.timestamp).toLocaleString() : '—'}
                       </div>
                     </div>
                   </div>
@@ -371,26 +374,34 @@ const AQI = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-purple-700">AQI</span>
-                      <span className={`font-bold ${predictedAQI.aqi <= 50 ? 'text-green-600' : predictedAQI.aqi <= 100 ? 'text-yellow-600' : predictedAQI.aqi <= 150 ? 'text-orange-600' : 'text-red-600'}`}>
-                        {predictedAQI.aqi}
+                      <span className={`font-bold ${predictedAQI.predicted_aqi <= 50 ? 'text-green-600' : predictedAQI.predicted_aqi <= 100 ? 'text-yellow-600' : predictedAQI.predicted_aqi <= 150 ? 'text-orange-600' : 'text-red-600'}`}>
+                        {predictedAQI.predicted_aqi}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-purple-700">PM2.5</span>
-                      <span className="font-bold text-purple-500">{predictedAQI.pm25}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-purple-700">PM10</span>
-                      <span className="font-bold text-purple-500">{predictedAQI.pm10}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-purple-700">Temperature</span>
-                      <span className="font-bold text-purple-500">{predictedAQI.temperature}°C</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-purple-700">Category</span>
-                      <span className="font-bold text-purple-500">{predictedAQI.category}</span>
-                    </div>
+                    {typeof predictedAQI.pm25 !== "undefined" && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-purple-700">PM2.5</span>
+                        <span className="font-bold text-purple-500">{predictedAQI.pm25}</span>
+                      </div>
+                    )}
+                    {typeof predictedAQI.pm10 !== "undefined" && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-purple-700">PM10</span>
+                        <span className="font-bold text-purple-500">{predictedAQI.pm10}</span>
+                      </div>
+                    )}
+                    {typeof predictedAQI.temperature !== "undefined" && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-purple-700">Temperature</span>
+                        <span className="font-bold text-purple-500">{predictedAQI.temperature}°C</span>
+                      </div>
+                    )}
+                    {typeof predictedAQI.category !== "undefined" && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-purple-700">Category</span>
+                        <span className="font-bold text-purple-500">{predictedAQI.category}</span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-gray-500">No prediction available</div>

@@ -39,7 +39,7 @@ const AirQualityCard = ({ data, loading, error }) => {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="bg-red-50 p-6 rounded-xl shadow-md border border-red-100">
@@ -51,7 +51,7 @@ const AirQualityCard = ({ data, loading, error }) => {
       </div>
     );
   }
-  
+
   if (!data) {
     return (
       <div className="bg-gray-50 p-6 rounded-xl shadow-md border border-gray-100">
@@ -60,44 +60,56 @@ const AirQualityCard = ({ data, loading, error }) => {
       </div>
     );
   }
-  
-  const aqiColor = getAqiColor(data.aqi);
-  const aqiLabel = getAqiLabel(data.aqi);
-  const healthImplications = getHealthImplications(data.aqi);
-  
+
+  // Defensive: Support both AirQualityRecord and AQILog formats (backend returns either)
+  const aqi = typeof data.aqi === "number" ? data.aqi : (
+    typeof data.overall_aqi === "number" ? data.overall_aqi : null
+  );
+  const pm25 = typeof data.pm25 !== "undefined"
+    ? data.pm25
+    : (data.concentrations && data.concentrations["PM2.5"])
+      ? data.concentrations["PM2.5"]
+      : null;
+  const location = data.location || data.device_location || "Unknown";
+  const timestamp = data.timestamp || null;
+
+  const aqiColor = getAqiColor(aqi);
+  const aqiLabel = getAqiLabel(aqi);
+  const healthImplications = getHealthImplications(aqi);
+
   return (
     <div className="bg-white p-6 rounded-xl shadow-md">
       <div className="flex items-center mb-4">
         <Wind className="w-6 h-6 text-blue-500 mr-2" />
         <h3 className="text-lg font-semibold text-gray-800">Air Quality Index</h3>
       </div>
-      
+
       <div className="mb-4">
         <div className={`inline-block px-3 py-1 rounded-full font-medium ${aqiColor}`}>
-          AQI: {data.aqi} - {aqiLabel}
+          AQI: {aqi !== null ? aqi : "--"} - {aqiLabel}
         </div>
       </div>
-      
+
       <div className="mb-4">
         <p className="text-sm text-gray-500">PM2.5</p>
-        <p className="font-semibold">{data.pm25} μg/m³</p>
+        <p className="font-semibold">{pm25 !== null && pm25 !== undefined ? pm25 : "--"} μg/m³</p>
       </div>
-      
+
       <div className="mt-4 text-sm text-gray-700">
         <p>{healthImplications}</p>
       </div>
-      
-      {data.location && (
+
+      {location && (
         <div className="mt-4 pt-4 border-t border-gray-100">
           <p className="text-sm text-gray-500">
-            Location: <span className="font-medium">{data.location}</span>
+            Location: <span className="font-medium">{location}</span>
           </p>
         </div>
       )}
-      
-      {data.timestamp && (
+
+      {timestamp && (
         <div className="mt-2 text-xs text-gray-400">
-          Updated: {new Date(data.timestamp).toLocaleString()}
+          Updated: {new Date(timestamp).toLocaleString()}
         </div>
       )}
     </div>
