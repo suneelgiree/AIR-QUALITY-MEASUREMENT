@@ -26,6 +26,12 @@ try:
 except ImportError as e:
     print(f"Error importing AQI_Calculator: {e}")
 
+# Import AQILog for integration
+try:
+    from sensor.models import AQILog
+except ImportError:
+    AQILog = None
+
 class WeatherService:
     @staticmethod
     def geocode_location(location):
@@ -290,7 +296,8 @@ class PredictionService:
     @staticmethod
     def fetch_full_feature_set(lat, lon, previous_aqi=0):
         """
-        Fetch and compile all 31 features for AQI prediction.
+        Fetch and compile all 31 features for AQI prediction,
+        integrating latest AQILog data if available.
         """
         features = {
             'temperature_2m (°C)': 0, 'relative_humidity_2m (%)': 0, 'dew_point_2m (°C)': 0,
@@ -307,6 +314,12 @@ class PredictionService:
             'soil_moisture_7_to_28cm (m³/m³)': 0, 'soil_moisture_28_to_100cm (m³/m³)': 0,
             'soil_moisture_100_to_255cm (m³/m³)': 0, 'prev_us_aqi': previous_aqi
         }
+        # Integrate latest AQILog data if available
+        if AQILog is not None:
+            latest_aqilog = AQILog.objects.order_by('-timestamp').first()
+            if latest_aqilog:
+                features['prev_us_aqi'] = latest_aqilog.overall_aqi
+
         weather = WeatherService.get_weather_data(lat, lon)
         if weather:
             main = weather.get('main', {})
@@ -374,10 +387,18 @@ class PredictionService:
         """
         Predict AQI for each 24h interval up to 7 days ahead.
         Returns a list of predictions for [24, 48, ..., 168] hours.
+        Uses AQILog data for previous AQI if available.
         """
         predictions = []
+        # Use AQILog for previous AQI if present
+        prev_aqi = previous_aqi
+        if AQILog is not None:
+            latest_aqilog = AQILog.objects.order_by('-timestamp').first()
+            if latest_aqilog:
+                prev_aqi = latest_aqilog.overall_aqi
+
         for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
-            features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=previous_aqi)
+            features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=prev_aqi)
             prediction = PredictionService.predict_aqi_from_features(features, model_name=model_name, hours_ahead=hours_ahead)
             predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', None)
             predictions.append({

@@ -15,4 +15,7 @@ urlpatterns = [
 
     # Endpoint for sensor file upload from cloud/device
     path('sensor/upload/', views.SensorFileUploadView.as_view(), name='sensor_file_upload'),
+    
+    # Endpoint for AQI log history
+    path('aqilog/history/', views.aqi_log_history, name='aqilog-history'),
 ]

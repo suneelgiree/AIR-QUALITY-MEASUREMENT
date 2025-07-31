@@ -13,12 +13,16 @@ from .serializers import AirQualityDataSerializer, AirQualityRecordSerializer
 from utils.services import WeatherService, AQICalculatorService, PredictionService
 from authentication.models import CustomUser
 
+# Import AQILog model and serializer
+from sensor.models import AQILog
+from sensor.serializers import AQILogSerializer
+
 logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def update_air_quality(request):
-    """Update air quality data for user's location using OpenWeatherMap API"""
+    """Update air quality data for user's location using OpenWeatherMap API and AQILog for prediction"""
     user = request.user
 
     if not user.latitude or not user.longitude:
@@ -39,16 +43,23 @@ def update_air_quality(request):
         **air_quality
     )
 
-    # Add prediction capability to existing view
+    # Add prediction capability to existing view, using latest AQILog as feature
     try:
         previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
         previous_aqi = previous_record.aqi if previous_record else 0
 
+        latest_aqilog = AQILog.objects.order_by('-timestamp').first()
+        latest_aqilog_aqi = latest_aqilog.overall_aqi if latest_aqilog else previous_aqi
+
         # 7-day predictions
         predictions = []
         for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
-            features = PredictionService.fetch_full_feature_set(user.latitude, user.longitude, previous_aqi=previous_aqi)
-            prediction = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=hours_ahead)
+            features = PredictionService.fetch_full_feature_set(
+                user.latitude, user.longitude, previous_aqi=latest_aqilog_aqi
+            )
+            prediction = PredictionService.predict_aqi_from_features(
+                features, model_name='svr_model.pkl', hours_ahead=hours_ahead
+            )
             predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', prediction.get('predicted_aqi_24h', None))
             predictions.append({
                 "hours_ahead": hours_ahead,
@@ -70,17 +81,31 @@ def update_air_quality(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def air_quality_history(request):
-    """Get air quality history for user from OpenWeatherMap data"""
+    """Get air quality history for user from OpenWeatherMap data and AQILog sensor data"""
     history = AirQualityData.objects.filter(user=request.user).order_by('-timestamp')[:30]
     serializer = AirQualityDataSerializer(history, many=True)
-    return Response(serializer.data)
+    aqilog_history = AQILog.objects.order_by('-timestamp')[:30]
+    aqilog_serializer = AQILogSerializer(aqilog_history, many=True)
+    return Response({
+        'api_history': serializer.data,
+        'aqilog_history': aqilog_serializer.data
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def aqi_log_history(request):
+    """Get AQILog history for dashboard or prediction (all users)"""
+    logs = AQILog.objects.order_by('-timestamp')[:100]
+    serializer = AQILogSerializer(logs, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AirQualityUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        """Update air quality using sensor data (simulation, API, or real sensor) and return 7-day predictions"""
+        """Update air quality using sensor data (simulation, API, or real sensor) and return 7-day predictions, using AQILog data if available"""
         try:
             use_api = request.data.get('use_api', False)
             use_real_sensor = request.data.get('use_real_sensor', False)
@@ -139,12 +164,16 @@ class AirQualityUpdateView(APIView):
 
             previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
             previous_aqi = previous_record.aqi if previous_record else 0
+
+            # Use AQILog entry for prediction if available
+            latest_aqilog = AQILog.objects.order_by('-timestamp').first()
+            latest_aqilog_aqi = latest_aqilog.overall_aqi if latest_aqilog else previous_aqi
             lat = getattr(user, 'latitude', None)
             lon = getattr(user, 'longitude', None)
 
             predictions = []
             for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
-                features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=previous_aqi)
+                features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=latest_aqilog_aqi)
                 prediction = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=hours_ahead)
                 predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', prediction.get('predicted_aqi_24h', None))
                 predictions.append({
@@ -184,11 +213,16 @@ class AirQualityHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Get air quality history from local sensor records"""
+        """Get air quality history from local sensor records and AQILog sensor data"""
         try:
             records = AirQualityRecord.objects.filter(user=request.user).order_by('-timestamp')[:100]
             serializer = AirQualityRecordSerializer(records, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            aqilog_history = AQILog.objects.order_by('-timestamp')[:100]
+            aqilog_serializer = AQILogSerializer(aqilog_history, many=True)
+            return Response({
+                'sensor_history': serializer.data,
+                'aqilog_history': aqilog_serializer.data
+            }, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error fetching air quality history: {str(e)}", exc_info=True)
             return Response(
@@ -201,7 +235,7 @@ class AirQualityDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Get comprehensive air quality dashboard data combining API and sensor data"""
+        """Get comprehensive air quality dashboard data combining API, AirQualityRecord, and AQILog data"""
         try:
             latest_sensor_record = AirQualityRecord.objects.filter(user=request.user).order_by('-timestamp').first()
             sensor_data = AirQualityRecordSerializer(latest_sensor_record).data if latest_sensor_record else None
@@ -215,14 +249,22 @@ class AirQualityDashboardView(APIView):
             api_history = AirQualityData.objects.filter(user=request.user).order_by('-timestamp')[:10]
             api_history_data = AirQualityDataSerializer(api_history, many=True).data
 
+            # AQILog current and history
+            latest_aqilog = AQILog.objects.order_by('-timestamp').first()
+            aqi_log_data = AQILogSerializer(latest_aqilog).data if latest_aqilog else None
+            aqi_log_history = AQILog.objects.order_by('-timestamp')[:10]
+            aqi_log_history_data = AQILogSerializer(aqi_log_history, many=True).data
+
             dashboard_data = {
                 'current': {
                     'sensor_data': sensor_data,
                     'api_data': api_data,
+                    'aqi_log': aqi_log_data,
                 },
                 'history': {
                     'sensor_data': sensor_history_data,
                     'api_data': api_history_data,
+                    'aqi_log': aqi_log_history_data,
                 }
             }
 
@@ -276,7 +318,7 @@ class SensorFileUploadView(APIView):
                         pressure=None,
                         category=entry.get('category_info', {}).get('category', 'Unknown'),
                         location=device_location,
-                        timestamp=timestamp or None  # Or entry['timestamp'] if available
+                        timestamp=timestamp or entry.get('timestamp', None)
                     )
                     records_created += 1
 
