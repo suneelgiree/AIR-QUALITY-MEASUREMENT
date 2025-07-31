@@ -42,9 +42,17 @@ const AQI = () => {
       // First check if we have history data
       const history = await airQualityService.getHistory();
 
-      if (history && history.length > 0) {
+      // Defensive: accept both array and object responses
+      let sensorHistory = [];
+      if (Array.isArray(history)) {
+        sensorHistory = history;
+      } else if (history && typeof history === "object") {
+        sensorHistory = history.sensor_history || history.aqilog_history || [];
+      }
+
+      if (sensorHistory.length > 0) {
         // Use the most recent record
-        setAirQualityData(history[0]);
+        setAirQualityData(sensorHistory[0]);
       } else {
         // No history data, try to update
         const response = await airQualityService.updateAirQuality();
@@ -64,7 +72,14 @@ const AQI = () => {
 
     try {
       const history = await airQualityService.getHistory();
-      setHistoryData(history);
+      // Defensive: accept both array and object responses
+      let sensorHistory = [];
+      if (Array.isArray(history)) {
+        sensorHistory = history;
+      } else if (history && typeof history === "object") {
+        sensorHistory = history.sensor_history || history.aqilog_history || [];
+      }
+      setHistoryData(sensorHistory);
     } catch (err) {
       console.error('Error fetching history:', err);
       setHistoryError('Failed to load air quality history.');
@@ -126,14 +141,19 @@ const AQI = () => {
   };
 
   const getChartData = () => {
-    if (!historyData || historyData.length === 0) return [];
+    if (!Array.isArray(historyData) || historyData.length === 0) return [];
     // Convert history data to a format suitable for the chart
-    return historyData.slice(0, 24).map(item => item.aqi).reverse();
+    // Defensive: only use items with aqi value! (for AQILog: 'overall_aqi', for AirQualityRecord: 'aqi')
+    return historyData
+      .filter(item => typeof item.aqi === "number" || typeof item.overall_aqi === "number")
+      .slice(0, 24)
+      .map(item => item.aqi ?? item.overall_aqi)
+      .reverse();
   };
 
   const accountName = userInfo?.full_name || "User";
   const chartData = getChartData();
-  const aqiStatus = airQualityData ? getAqiLabel(airQualityData.aqi) : { label: 'LOADING', color: 'bg-gray-400 text-white' };
+  const aqiStatus = airQualityData ? getAqiLabel(airQualityData.aqi ?? airQualityData.overall_aqi) : { label: 'LOADING', color: 'bg-gray-400 text-white' };
   const predictedStatus = predictedAQI ? getAqiLabel(predictedAQI.aqi) : { label: 'PREDICTING', color: 'bg-gray-400 text-white' };
 
   return (
@@ -206,15 +226,15 @@ const AQI = () => {
                 <div className="text-gray-500 text-sm mb-2">Current Location</div>
                 <div className="flex items-center gap-4">
                   <div className="flex flex-col items-center">
-                    <div className="text-2xl font-bold text-green-700">{airQualityData?.aqi || '—'}</div>
+                    <div className="text-2xl font-bold text-green-700">{airQualityData?.aqi ?? airQualityData?.overall_aqi ?? '—'}</div>
                     <div className="text-xs text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long' })},</div>
                     <div className="text-lg font-semibold text-gray-800">{new Date().toLocaleDateString('en-US', { month: 'long' })}</div>
                   </div>
                   <div>
                     {airQualityData ? (
                       <>
-                        <div className="text-sm text-gray-700 mb-1">PM2.5: {airQualityData.pm25} μg/m³</div>
-                        <div className="text-xs text-gray-500">Location: {airQualityData.location}</div>
+                        <div className="text-sm text-gray-700 mb-1">PM2.5: {airQualityData.pm25 ?? airQualityData.concentrations?.['PM2.5']} μg/m³</div>
+                        <div className="text-xs text-gray-500">Location: {airQualityData.location ?? airQualityData.device_location ?? 'Unknown'}</div>
                         <div className="text-xs text-gray-500">Last updated: {new Date(airQualityData.timestamp).toLocaleTimeString()}</div>
                       </>
                     ) : loading ? (
@@ -288,14 +308,14 @@ const AQI = () => {
                   <div className="flex flex-col items-center justify-center">
                     <div className="text-gray-700 text-sm mb-1">Live AQI</div>
                     <div className={`text-4xl font-bold ${
-                      airQualityData.aqi <= 50 ? 'text-green-600' : 
-                      airQualityData.aqi <= 100 ? 'text-yellow-600' :
-                      airQualityData.aqi <= 150 ? 'text-orange-600' :
-                      airQualityData.aqi <= 200 ? 'text-red-600' :
-                      airQualityData.aqi <= 300 ? 'text-purple-700' : 
+                      (airQualityData.aqi ?? airQualityData.overall_aqi) <= 50 ? 'text-green-600' : 
+                      (airQualityData.aqi ?? airQualityData.overall_aqi) <= 100 ? 'text-yellow-600' :
+                      (airQualityData.aqi ?? airQualityData.overall_aqi) <= 150 ? 'text-orange-600' :
+                      (airQualityData.aqi ?? airQualityData.overall_aqi) <= 200 ? 'text-red-600' :
+                      (airQualityData.aqi ?? airQualityData.overall_aqi) <= 300 ? 'text-purple-700' : 
                       'text-rose-800'
-                    }`}>{airQualityData.aqi}</div>
-                    <div className="text-xs text-gray-600">PM-2.5: {airQualityData.pm25} μg/m³</div>
+                    }`}>{airQualityData.aqi ?? airQualityData.overall_aqi}</div>
+                    <div className="text-xs text-gray-600">PM-2.5: {airQualityData.pm25 ?? airQualityData.concentrations?.['PM2.5']} μg/m³</div>
                   </div>
                   
                   <div className="flex flex-col items-center justify-center mx-8">
@@ -306,7 +326,7 @@ const AQI = () => {
                     <div className="mt-3 flex items-center gap-1">
                       {/* AQI Color Bar */}
                       <div className="w-32 h-3 rounded bg-gradient-to-r from-green-400 via-yellow-400 via-orange-400 via-red-500 to-purple-700" />
-                      <span className="text-xs text-gray-500 ml-2">{airQualityData.aqi}</span>
+                      <span className="text-xs text-gray-500 ml-2">{airQualityData.aqi ?? airQualityData.overall_aqi}</span>
                     </div>
                     <div className="flex justify-between w-32 text-[10px] text-gray-500 mt-1">
                       <span>0</span>
@@ -320,7 +340,7 @@ const AQI = () => {
                   
                   <div className="flex-1 flex flex-col items-end justify-between h-full">
                     <div className="text-right">
-                      <div className="font-semibold text-green-900">{airQualityData.location}</div>
+                      <div className="font-semibold text-green-900">{airQualityData.location ?? airQualityData.device_location ?? 'Unknown'}</div>
                       <div className="text-xs text-gray-700">
                         Last Updated: {new Date(airQualityData.timestamp).toLocaleString()}
                       </div>
@@ -441,37 +461,37 @@ const AQI = () => {
                   <div className="text-red-600">Unable to provide health impact information</div>
                 ) : airQualityData ? (
                   <div className="space-y-4">
-                    {airQualityData.aqi <= 50 && (
+                    {(airQualityData.aqi ?? airQualityData.overall_aqi) <= 50 && (
                       <p className="text-gray-700">
                         Air quality is considered satisfactory, and air pollution poses little or no risk.
                       </p>
                     )}
                     
-                    {airQualityData.aqi > 50 && airQualityData.aqi <= 100 && (
+                    {(airQualityData.aqi ?? airQualityData.overall_aqi) > 50 && (airQualityData.aqi ?? airQualityData.overall_aqi) <= 100 && (
                       <p className="text-gray-700">
                         Air quality is acceptable; however, for some pollutants there may be a moderate health concern for a very small number of people who are unusually sensitive to air pollution.
                       </p>
                     )}
                     
-                    {airQualityData.aqi > 100 && airQualityData.aqi <= 150 && (
+                    {(airQualityData.aqi ?? airQualityData.overall_aqi) > 100 && (airQualityData.aqi ?? airQualityData.overall_aqi) <= 150 && (
                       <p className="text-gray-700">
                         Members of sensitive groups may experience health effects. The general public is not likely to be affected.
                       </p>
                     )}
                     
-                    {airQualityData.aqi > 150 && airQualityData.aqi <= 200 && (
+                    {(airQualityData.aqi ?? airQualityData.overall_aqi) > 150 && (airQualityData.aqi ?? airQualityData.overall_aqi) <= 200 && (
                       <p className="text-gray-700">
                         Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.
                       </p>
                     )}
                     
-                    {airQualityData.aqi > 200 && airQualityData.aqi <= 300 && (
+                    {(airQualityData.aqi ?? airQualityData.overall_aqi) > 200 && (airQualityData.aqi ?? airQualityData.overall_aqi) <= 300 && (
                       <p className="text-gray-700">
                         Health warnings of emergency conditions. The entire population is more likely to be affected.
                       </p>
                     )}
                     
-                    {airQualityData.aqi > 300 && (
+                    {(airQualityData.aqi ?? airQualityData.overall_aqi) > 300 && (
                       <p className="text-gray-700">
                         Health alert: everyone may experience more serious health effects.
                       </p>
