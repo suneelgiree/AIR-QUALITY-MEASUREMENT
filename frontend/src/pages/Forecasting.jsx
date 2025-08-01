@@ -6,9 +6,9 @@ import axios from 'axios';
 
 const Forecasting = () => {
   const [accountMenu, setAccountMenu] = useState(false);
-  const [location, setLocation] = useState('Lalitpur'); // Default location
+  const [location, setLocation] = useState(''); // Start with an empty location
   const [searchQuery, setSearchQuery] = useState('');
-  const [combinedForecast, setCombinedForecast] = useState([]); // Combined weather and AQI data
+  const [combinedForecast, setCombinedForecast] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,10 +16,44 @@ const Forecasting = () => {
   const [userInfo, setUserInfo] = useState(null);
   const navigate = useNavigate();
 
+  // --- FIX: Fetch user's location on initial load ---
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) setUserInfo(JSON.parse(storedUser));
-    fetchForecastData(location);
+
+    const fetchUserLocationAndData = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            try {
+              // Reverse geocode to get city name from coordinates
+              const geoResponse = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+              const city = geoResponse.data.address.city || geoResponse.data.address.town || geoResponse.data.address.village || 'Lalitpur';
+              setLocation(city);
+              fetchForecastData(city);
+            } catch (geoError) {
+              console.error("Reverse geocoding failed. Falling back to default location.", geoError);
+              setLocation('Lalitpur');
+              fetchForecastData('Lalitpur');
+            }
+          },
+          (geoError) => {
+            // Handle user denying permission or other geolocation errors
+            console.warn("Geolocation permission denied. Falling back to default location.", geoError.message);
+            setLocation('Lalitpur');
+            fetchForecastData('Lalitpur');
+          }
+        );
+      } else {
+        // Handle browsers that don't support geolocation
+        console.warn("Geolocation is not supported by this browser. Falling back to default location.");
+        setLocation('Lalitpur');
+        fetchForecastData('Lalitpur');
+      }
+    };
+
+    fetchUserLocationAndData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -62,11 +96,8 @@ const Forecasting = () => {
     setError(null);
 
     try {
-      // --- FIX: Fetch Weather Data and robustly check if it is an array ---
       let weatherData = [];
       try {
-        // NOTE: Your backend has this as a POST endpoint, but frontend calls GET. This will fail.
-        // The robust fallback to mock data is essential here.
         const weatherResponse = await axios.get(`/api/weather/forecast/?location=${locationName}`);
         if (Array.isArray(weatherResponse.data)) {
           weatherData = weatherResponse.data;
@@ -79,7 +110,6 @@ const Forecasting = () => {
         weatherData = generateMockWeatherData(7);
       }
 
-      // Fetch 7-Day AQI Predictions
       let aqiPredictions = [];
       try {
         const aqiResponse = await airQualityService.updateSensor({ use_api: true });
@@ -88,15 +118,12 @@ const Forecasting = () => {
         }
       } catch (err) {
         console.error("AQI prediction API failed.", err);
-        // We can still proceed with weather data.
       }
       
-      // Final check to prevent crash
       if (!Array.isArray(weatherData)) {
           throw new TypeError("Processed weather data is not an array, cannot proceed.");
       }
 
-      // Combine weather and AQI data
       const combinedData = weatherData.map((weatherDay) => {
         const dayDate = new Date(weatherDay.date);
         const aqiPrediction = aqiPredictions.find(p => {
@@ -124,6 +151,7 @@ const Forecasting = () => {
       if (combinedData.length > 0) {
         const baseTemp = combinedData[0].temp;
         setChartData(generateHourlyChartData(baseTemp));
+        setSelectedDayIndex(0); // Reset to the first day on new data fetch
       } else {
         setError("No forecast data could be loaded for the specified location.");
       }
@@ -220,7 +248,7 @@ const Forecasting = () => {
       {isLoading && (
         <div className="flex justify-center items-center py-10">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          <p className="ml-4 text-blue-700">Loading 7-Day Forecast...</p>
+          <p className="ml-4 text-blue-700">Detecting location and loading forecast...</p>
         </div>
       )}
 
