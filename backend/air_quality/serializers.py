@@ -1,41 +1,41 @@
 from rest_framework import serializers
-from .models import AirQualityData, AirQualityRecord, AQIPrediction
+from .models import AirQualityReading, AQIForecast, ForecastDataPoint, SensorFileUpload
 
-class AirQualityDataSerializer(serializers.ModelSerializer):
+# --- NEW: Serializer for individual data points in a forecast ---
+class ForecastDataPointSerializer(serializers.ModelSerializer):
+    """
+    Formats a single day's forecast data point.
+    """
     class Meta:
-        model = AirQualityData
+        model = ForecastDataPoint
+        fields = ['date', 'predicted_aqi']
+
+
+# --- NEW: Serializer for the main forecast object ---
+class AQIForecastSerializer(serializers.ModelSerializer):
+    """
+    Formats the main forecast object, nesting the 7-day data points within it.
+    This provides a complete forecast package in a single API response.
+    """
+    # This line tells the serializer to find the related data points,
+    # format them using the ForecastDataPointSerializer, and nest them
+    # under the key 'data_points'.
+    data_points = ForecastDataPointSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = AQIForecast
+        fields = ['generated_at', 'latitude', 'longitude', 'data_points']
+
+
+# --- Existing Serializers ---
+class AirQualityReadingSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()
+    class Meta:
+        model = AirQualityReading
         fields = '__all__'
-        read_only_fields = ('user', 'timestamp')
 
-class AQIPredictionSerializer(serializers.ModelSerializer):
+
+class SensorFileUploadSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AQIPrediction
-        fields = ['id', 'hours_ahead', 'predicted_aqi', 'model_used', 'created_at', 'confidence']
-
-class AirQualityRecordSerializer(serializers.ModelSerializer):
-    # Include nested predictions
-    predictions = AQIPredictionSerializer(many=True, read_only=True)
-    
-    class Meta:
-        model = AirQualityRecord
-        fields = [
-            'id', 'aqi', 'pm25', 'pm10', 'temperature', 'humidity', 
-            'pressure', 'category', 'location', 'timestamp', 'predictions'
-        ]
-        read_only_fields = ('user', 'timestamp')
-
-class AirQualityDashboardSerializer(serializers.Serializer):
-    api_data = AirQualityDataSerializer(required=False)
-    sensor_data = AirQualityRecordSerializer(required=False)
-    # For stats and additional metrics
-    average_aqi = serializers.FloatField(required=False)
-    min_aqi = serializers.FloatField(required=False)
-    max_aqi = serializers.FloatField(required=False)
-    trend = serializers.CharField(required=False)
-
-# Serializer for validating sensor file uploads from device/cloud
-class SensorFileUploadSerializer(serializers.Serializer):
-    filename = serializers.CharField()
-    timestamp = serializers.CharField()
-    data = serializers.CharField()
-    location = serializers.CharField(required=False)
+        model = SensorFileUpload
+        fields = '__all__'

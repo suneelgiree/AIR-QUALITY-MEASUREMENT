@@ -1,362 +1,174 @@
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.views import APIView
+from django.conf import settings
+from rest_framework import status, generics, views, serializers
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 import logging
 import json
-import csv
-from io import StringIO
+import requests
+from django.http import JsonResponse
 
-from .models import AirQualityData, AirQualityRecord, AQIPrediction
-from .serializers import AirQualityDataSerializer, AirQualityRecordSerializer
-from utils.services import WeatherService, AQICalculatorService, PredictionService
-from authentication.models import CustomUser
-
-from sensor.models import AQILog
-from sensor.serializers import AQILogSerializer
+from authentication.permissions import HasAPIKey
+from .models import AirQualityReading, AQIForecast, SensorFileUpload
+from .serializers import (
+    SensorFileUploadSerializer, 
+    AQIForecastSerializer
+)
+from utils.services import WeatherService
 
 logger = logging.getLogger(__name__)
 
-def debug_features(features):
-    logger.info("----- SVR Feature Vector -----")
-    for k, v in features.items():
-        logger.info(f"{k}: {v}")
-    logger.info("------------------------------")
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def update_air_quality(request):
-    user = request.user
+# --- FIX: Define the correct AirQualityReadingSerializer directly in the view ---
+# This ensures the database field `pm2_5` is correctly mapped to the JSON output field `pm25`.
+class AirQualityReadingSerializer(serializers.ModelSerializer):
+    # Explicitly define the field to map `pm25` (JSON) from `pm2_5` (database model)
+    pm25 = serializers.FloatField(source='pm2_5', read_only=True)
 
-    if not user.latitude or not user.longitude:
-        return Response({
-            'error': 'User location not available'
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    # Get air quality from OpenWeatherMap and calculate AQI from PM2.5/PM10
-    air_quality_raw = WeatherService.get_air_quality_data(user.latitude, user.longitude)
-    if not air_quality_raw:
-        return Response({
-            'error': 'Failed to fetch air quality data'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    sensor_data = {
-        'pm25': air_quality_raw['pm25'],
-        'pm10': air_quality_raw['pm10'],
-    }
-    weather = WeatherService.get_weather_data(user.latitude, user.longitude)
-    if weather:
-        sensor_data['temperature'] = weather['main'].get('temp')
-        sensor_data['humidity'] = weather['main'].get('humidity')
-        sensor_data['pressure'] = weather['main'].get('pressure')
-
-    calculated_aqi_data = AQICalculatorService.calculate_aqi_from_data(sensor_data)
-    air_quality = {
-        'aqi': calculated_aqi_data['aqi'],
-        'pm25': air_quality_raw['pm25'],
-        'pm10': air_quality_raw['pm10'],
-        'co': air_quality_raw.get('co'),
-        'no2': air_quality_raw.get('no2'),
-        'so2': air_quality_raw.get('so2'),
-        'o3': air_quality_raw.get('o3'),
-        'location': user.location
-    }
-    
-    # Only keep fields present in the AirQualityData model
-    model_fields = {'aqi', 'pm25', 'pm10', 'co', 'no2', 'so2', 'o3', 'location'}
-    air_quality_filtered = {k: v for k, v in air_quality.items() if k in model_fields}
-
-    record = AirQualityData.objects.create(
-        user=user,
-        **air_quality_filtered
-    )
-
-    try:
-        previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
-        previous_aqi = previous_record.aqi if previous_record else 0
-
-        latest_aqilog = AQILog.objects.order_by('-timestamp').first()
-        latest_aqilog_aqi = getattr(latest_aqilog, "overall_aqi", None)
-        if latest_aqilog_aqi is None or latest_aqilog_aqi == 0:
-            latest_aqilog_aqi = air_quality.get('aqi', previous_aqi)
-
-        predictions = []
-        for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
-            features = PredictionService.fetch_full_feature_set(
-                user.latitude, user.longitude, previous_aqi=latest_aqilog_aqi
-            )
-            debug_features(features)
-            prediction = PredictionService.predict_aqi_from_features(
-                features, model_name='svr_model.pkl', hours_ahead=hours_ahead
-            )
-            predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', prediction.get('predicted_aqi_24h', None))
-            logger.info(f"SVR Model raw predicted AQI for {hours_ahead}h: {predicted_aqi_val}")
-            predictions.append({
-                "hours_ahead": hours_ahead,
-                "predicted_aqi": predicted_aqi_val,
-                "model_used": "svr_model.pkl",
-                "confidence": prediction.get('confidence', None)
-            })
-        air_quality['predictions'] = predictions
-    except Exception as e:
-        logger.error(f"Prediction error: {str(e)}")
-        air_quality['prediction_error'] = str(e)
-
-    return Response({
-        'message': 'Air quality data updated successfully',
-        'data': air_quality
-    })
+    class Meta:
+        model = AirQualityReading
+        # Ensure all necessary fields are included in the API response
+        fields = [
+            'id', 'user', 'source', 'location_name', 'latitude', 'longitude',
+            'timestamp', 'aqi', 'pm25', 'pm10', 'co', 'no2', 'so2', 'o3',
+            'category', 'raw_data'
+        ]
+        read_only_fields = ['id', 'timestamp', 'user']
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def air_quality_history(request):
-    history = AirQualityData.objects.filter(user=request.user).order_by('-timestamp')[:30]
-    serializer = AirQualityDataSerializer(history, many=True)
-    aqilog_history = AQILog.objects.order_by('-timestamp')[:30]
-    aqilog_serializer = AQILogSerializer(aqilog_history, many=True)
-    return Response({
-        'api_history': serializer.data,
-        'aqilog_history': aqilog_serializer.data
-    })
+# --- PUBLIC-FACING API VIEWS ---
 
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def aqi_log_history(request):
-    logs = AQILog.objects.order_by('-timestamp')[:100]
-    serializer = AQILogSerializer(logs, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class AirQualityUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            use_api = request.data.get('use_api', False)
-            use_real_sensor = request.data.get('use_real_sensor', False)
-            user = request.user
-
-            if use_api:
-                if not user.latitude or not user.longitude:
-                    return Response({'error': 'User location not available'}, status=status.HTTP_400_BAD_REQUEST)
-                air_quality_raw = WeatherService.get_air_quality_data(user.latitude, user.longitude)
-                if not air_quality_raw:
-                    return Response({'error': 'Failed to fetch air quality data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                sensor_data = {
-                    'pm25': air_quality_raw['pm25'],
-                    'pm10': air_quality_raw['pm10'],
-                }
-                weather = WeatherService.get_weather_data(user.latitude, user.longitude)
-                if weather:
-                    sensor_data['temperature'] = weather['main'].get('temp')
-                    sensor_data['humidity'] = weather['main'].get('humidity')
-                    sensor_data['pressure'] = weather['main'].get('pressure')
-                calculated_aqi_data = AQICalculatorService.calculate_aqi_from_data(sensor_data)
-                aqi_data = {
-                    'aqi': calculated_aqi_data['aqi'],
-                    'pm25': air_quality_raw['pm25'],
-                    'pm10': air_quality_raw['pm10'],
-                    'category': calculated_aqi_data.get('category', 'Unknown'),
-                    'temperature': sensor_data.get('temperature'),
-                    'humidity': sensor_data.get('humidity'),
-                    'pressure': sensor_data.get('pressure'),
-                    'location': user.location
-                }
-                data_source = 'OpenWeatherMap API'
-            elif use_real_sensor:
-                sensor_data = AQICalculatorService.read_real_sensor_data()
-                if not sensor_data:
-                    return Response({'error': 'Failed to read from real sensor'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                aqi_data = AQICalculatorService.calculate_aqi_from_data(sensor_data)
-                aqi_data['location'] = user.location
-                data_source = 'Real Sensor'
-            else:
-                return Response({'error': 'No valid AQI data source selected (simulation disabled)'}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Only keep fields present in the AirQualityRecord model
-            record_fields = {'aqi', 'pm25', 'pm10', 'temperature', 'humidity', 'pressure', 'category', 'location'}
-            aqi_data_filtered = {k: v for k, v in aqi_data.items() if k in record_fields}
-            record = AirQualityRecord.objects.create(
-                user=user,
-                **aqi_data_filtered
-            )
-
-            previous_record = AirQualityRecord.objects.filter(user=user).order_by('-timestamp').first()
-            previous_aqi = previous_record.aqi if previous_record else 0
-
-            latest_aqilog = AQILog.objects.order_by('-timestamp').first()
-            latest_aqilog_aqi = getattr(latest_aqilog, "overall_aqi", None)
-            if latest_aqilog_aqi is None or latest_aqilog_aqi == 0:
-                latest_aqilog_aqi = aqi_data.get('aqi', previous_aqi)
-            lat = getattr(user, 'latitude', None)
-            lon = getattr(user, 'longitude', None)
-
-            predictions = []
-            for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
-                features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=latest_aqilog_aqi)
-                debug_features(features)
-                prediction = PredictionService.predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=hours_ahead)
-                predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', prediction.get('predicted_aqi_24h', None))
-                logger.info(f"SVR Model raw predicted AQI for {hours_ahead}h: {predicted_aqi_val}")
-                predictions.append({
-                    "hours_ahead": hours_ahead,
-                    "predicted_aqi": predicted_aqi_val,
-                    "model_used": "svr_model.pkl",
-                    "confidence": prediction.get('confidence', None)
-                })
-                if predicted_aqi_val is not None and not isinstance(predicted_aqi_val, str):
-                    AQIPrediction.objects.create(
-                        air_quality_record=record,
-                        hours_ahead=hours_ahead,
-                        predicted_aqi=predicted_aqi_val,
-                        model_used="svr_model.pkl"
-                    )
-                else:
-                    logger.error(f"Skipping AQIPrediction save for hours_ahead={hours_ahead}: invalid value {predicted_aqi_val}")
-
-            response_data = {
-                **aqi_data,
-                'id': record.id,
-                'predictions': predictions,
-                'data_source': data_source
-            }
-
-            return Response(response_data, status=status.HTTP_200_OK)
-        except Exception as e:
-            logger.error(f"Error updating air quality: {str(e)}", exc_info=True)
-            return Response(
-                {"error": "Failed to update air quality data", "detail": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
-class AirQualityHistoryView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        try:
-            records = AirQualityRecord.objects.filter(user=request.user).order_by('-timestamp')[:100]
-            serializer = AirQualityRecordSerializer(records, many=True)
-            aqilog_history = AQILog.objects.order_by('-timestamp')[:100]
-            aqilog_serializer = AQILogSerializer(aqilog_history, many=True)
-            return Response({
-                'sensor_history': serializer.data,
-                'aqilog_history': aqilog_serializer.data
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
-            logger.error(f"Error fetching air quality history: {str(e)}", exc_info=True)
-            return Response(
-                {"error": "Failed to fetch air quality history", "detail": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
-class AirQualityDashboardView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        try:
-            latest_sensor_record = AirQualityRecord.objects.filter(user=request.user).order_by('-timestamp').first()
-            sensor_data = AirQualityRecordSerializer(latest_sensor_record).data if latest_sensor_record else None
-
-            latest_api_record = AirQualityData.objects.filter(user=request.user).order_by('-timestamp').first()
-            api_data = AirQualityDataSerializer(latest_api_record).data if latest_api_record else None
-
-            sensor_history = AirQualityRecord.objects.filter(user=request.user).order_by('-timestamp')[:10]
-            sensor_history_data = AirQualityRecordSerializer(sensor_history, many=True).data
-
-            api_history = AirQualityData.objects.filter(user=request.user).order_by('-timestamp')[:10]
-            api_history_data = AirQualityDataSerializer(api_history, many=True).data
-
-            latest_aqilog = AQILog.objects.order_by('-timestamp').first()
-            aqi_log_data = AQILogSerializer(latest_aqilog).data if latest_aqilog else None
-            aqi_log_history = AQILog.objects.order_by('-timestamp')[:10]
-            aqi_log_history_data = AQILogSerializer(aqi_log_history, many=True).data
-
-            dashboard_data = {
-                'current': {
-                    'sensor_data': sensor_data,
-                    'api_data': api_data,
-                    'aqi_log': aqi_log_data,
-                },
-                'history': {
-                    'sensor_data': sensor_history_data,
-                    'api_data': api_history_data,
-                    'aqi_log': aqi_log_history_data,
-                }
-            }
-
-            return Response(dashboard_data, status=status.HTTP_200_OK)
-        except Exception as e:
-            logger.error(f"Error retrieving dashboard data: {str(e)}", exc_info=True)
-            return Response(
-                {"error": "Failed to retrieve dashboard data", "detail": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
-class SensorFileUploadView(APIView):
+class LatestAQIView(generics.RetrieveAPIView):
+    """
+    An unauthenticated API endpoint to retrieve the single most recent air quality reading.
+    """
+    serializer_class = AirQualityReadingSerializer # Use the corrected serializer
     permission_classes = [AllowAny]
 
+    def get_object(self):
+        """Overrides default lookup to return the latest reading."""
+        return AirQualityReading.objects.order_by('-timestamp').first()
+
+
+class LatestForecastView(generics.RetrieveAPIView):
+    """
+    An unauthenticated API endpoint that returns the most recently generated 7-day forecast,
+    complete with all its data points.
+    """
+    serializer_class = AQIForecastSerializer
+    permission_classes = [AllowAny]
+
+    def get_object(self):
+        """Overrides default lookup to return the latest forecast."""
+        return AQIForecast.objects.prefetch_related('data_points').order_by('-generated_at').first()
+
+
+class PublicHistoryView(generics.ListAPIView):
+    """
+    Provides a list of the most recent public AirQualityReadings, not filtered by user.
+    This is used by the frontend as a fallback if a user has no personal history.
+    """
+    permission_classes = [AllowAny]
+    serializer_class = AirQualityReadingSerializer # Use the corrected serializer
+    queryset = AirQualityReading.objects.all().order_by('-timestamp')[:10]
+
+
+# --- USER-AUTHENTICATED AND SENSOR API VIEWS ---
+
+class AirQualityRecordView(views.APIView):
+    """
+    Handles fetching and creating Air Quality Readings for the authenticated user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Returns the most recent AirQualityReading for the authenticated user."""
+        try:
+            latest_reading = AirQualityReading.objects.filter(user=request.user).latest('timestamp')
+            serializer = AirQualityReadingSerializer(latest_reading) # Use the corrected serializer
+            return Response(serializer.data)
+        except AirQualityReading.DoesNotExist:
+            return Response({"message": "No air quality data found for this user."}, status=status.HTTP_404_NOT_FOUND)
+
     def post(self, request):
-        filename = request.data.get('filename')
-        timestamp = request.data.get('timestamp')
-        data = request.data.get('data')
-        device_location = request.data.get('location', 'Unknown')
+        """Creates a new AirQualityReading from an external API based on user's location."""
+        user = request.user
+        if not user.latitude or not user.longitude:
+            return Response({'error': 'User profile must have latitude and longitude set.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not filename or not data:
-            return Response({'error': 'Missing filename or data.'}, status=status.HTTP_400_BAD_REQUEST)
+        air_quality_data = WeatherService.get_air_quality_data(user.latitude, user.longitude)
+        if not air_quality_data:
+            return Response({'error': 'Failed to fetch air quality data from external API.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        records_created = 0
+        # --- FIX: Save to the correct `pm2_5` model field ---
+        reading = AirQualityReading.objects.create(
+            user=user, source='api', location_name=user.location, latitude=user.latitude,
+            longitude=user.longitude, aqi=air_quality_data.get('aqi'),
+            pm2_5=air_quality_data.get('pm25'), # Corrected field name
+            pm10=air_quality_data.get('pm10'),
+            co=air_quality_data.get('co'), no2=air_quality_data.get('no2'),
+            so2=air_quality_data.get('so2'), o3=air_quality_data.get('o3'),
+            category=air_quality_data.get('category'), raw_data=air_quality_data
+        )
+        serializer = AirQualityReadingSerializer(reading)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class AirQualityHistoryView(generics.ListAPIView):
+    """
+    Provides a list of historical AirQualityReadings for the authenticated user
+    directly from the database.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = AirQualityReadingSerializer # Use the corrected serializer
+
+    def get_queryset(self):
+        """Filters readings based on the authenticated user and optional query params."""
+        user = self.request.user
+        queryset = AirQualityReading.objects.filter(user=user)
+        source = self.request.query_params.get('source')
+        if source in ['api', 'sensor']:
+            queryset = queryset.filter(source=source)
+        return queryset.order_by('-timestamp')[:100]
+
+
+class SensorFileUploadView(generics.CreateAPIView):
+    """
+    Endpoint for devices to upload sensor data files, secured with an API Key.
+    """
+    serializer_class = SensorFileUploadSerializer
+    permission_classes = [HasAPIKey]
+
+    def perform_create(self, serializer):
+        validated_data = serializer.validated_data
+        filename = validated_data['filename']
+        data_content = validated_data['data']
+        user = self.request.user
 
         try:
-            user = CustomUser.objects.first()
-
-            if filename.endswith('.json'):
-                sensor_data = json.loads(data)
-                if isinstance(sensor_data, dict):
-                    sensor_data = [sensor_data]
-                for entry in sensor_data:
-                    AirQualityRecord.objects.create(
-                        user=user,
-                        aqi=entry.get('overall_aqi', 0),
-                        pm25=entry.get('concentrations', {}).get('PM2.5', 0),
-                        pm10=entry.get('concentrations', {}).get('PM10', 0),
-                        temperature=None,
-                        humidity=None,
-                        pressure=None,
-                        category=entry.get('category_info', {}).get('category', 'Unknown'),
-                        location=device_location,
-                        timestamp=timestamp or entry.get('timestamp', None)
-                    )
-                    records_created += 1
-
-            elif filename.endswith('.csv'):
-                reader = csv.reader(StringIO(data))
-                for row in reader:
-                    if len(row) < 7:
-                        continue
-                    AirQualityRecord.objects.create(
-                        user=user,
-                        aqi=row[4],
-                        pm25=row[2],
-                        pm10=row[3],
-                        temperature=None,
-                        humidity=None,
-                        pressure=None,
-                        category=row[5],
-                        location=device_location,
-                        timestamp=row[0]
-                    )
-                    records_created += 1
-
-            return Response({
-                'message': f"{records_created} records ingested from {filename}.",
-                'filename': filename,
-            }, status=status.HTTP_201_CREATED)
+            logger.info(f"User '{user.email}' successfully uploaded file '{filename}'.")
         except Exception as e:
-            logger.error(f"Error ingesting sensor file: {str(e)}", exc_info=True)
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f"Error ingesting sensor file '{filename}' for user '{user.email}': {e}", exc_info=True)
+            raise serializers.ValidationError({'error': 'Failed to process file data.', 'detail': str(e)})
+
+
+# --- PROXY VIEW TO FIX CORS ERROR ---
+class ExternalAQIProxyView(views.APIView):
+    """
+    A proxy view to fetch data from the external AWS Lambda function.
+    This solves the browser's CORS issue by having the server make the request.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        external_url = 'https://f2whboqd6l.execute-api.us-east-1.amazonaws.com/default/getAQIData'
+        try:
+            response = requests.get(external_url, timeout=10)
+            response.raise_for_status()
+            data = json.loads(response.text)
+            return JsonResponse(data, safe=False)
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Proxy view failed to fetch data from external source: {e}")
+            return JsonResponse({'error': f'Failed to fetch data from external source: {e}'}, status=502)
+        except json.JSONDecodeError as e:
+            logger.error(f"Proxy view failed to decode JSON from external source: {e}")
+            return JsonResponse({'error': 'Failed to decode response from external source.'}, status=502)

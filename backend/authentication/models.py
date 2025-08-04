@@ -1,10 +1,10 @@
 from django.db import models
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
-
-
-
+import secrets
+# --- Import geopy ---
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -31,7 +31,6 @@ class CustomUserManager(BaseUserManager):
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
-    username = models.CharField(max_length=150, blank=True)
     full_name = models.CharField(max_length=255, blank=True)
     location = models.CharField(max_length=255, blank=True)
     latitude = models.FloatField(null=True, blank=True)
@@ -39,6 +38,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)
+    api_key = models.CharField(max_length=64, unique=True, null=True, blank=True, editable=False)
 
     objects = CustomUserManager()
 
@@ -47,3 +47,23 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    def save(self, *args, **kwargs):
+        # --- ADDED: Geocoding logic ---
+        # Check if the location field has a value and if coordinates are missing
+        if self.location and (self.latitude is None or self.longitude is None):
+            geolocator = Nominatim(user_agent="air_quality_app") # user_agent is required
+            try:
+                location_data = geolocator.geocode(self.location)
+                if location_data:
+                    self.latitude = location_data.latitude
+                    self.longitude = location_data.longitude
+            except (GeocoderTimedOut, GeocoderUnavailable):
+                # Handle cases where the geocoding service is unavailable
+                # You could log this error or try again later. For now, we'll just pass.
+                pass
+        
+        if not self.api_key:
+            self.api_key = secrets.token_hex(32)
+        
+        super().save(*args, **kwargs)

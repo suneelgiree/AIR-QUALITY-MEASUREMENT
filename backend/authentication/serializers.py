@@ -1,56 +1,36 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
-from air_quality.models import AirQualityData
-
-User = get_user_model()
+from .models import CustomUser
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, validators=[validate_password])
-    password_confirm = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    password2 = serializers.CharField(write_only=True, required=True, label="Confirm password")
 
     class Meta:
-        model = User
-        fields = ('email', 'password', 'password_confirm', 'full_name', 'location')
+        model = CustomUser
+        # --- CORRECTED: Using 'full_name' to match your form and the updated model ---
+        fields = ('email', 'full_name', 'location', 'password', 'password2')
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError("Passwords don't match")
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        user = User.objects.create_user(
-            username=validated_data['email'],
+        # --- CORRECTED: Passing 'full_name' to the create_user method ---
+        user = CustomUser.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
-            full_name=validated_data['full_name'],
-            location=validated_data['location']
+            full_name=validated_data.get('full_name', ''),
+            location=validated_data.get('location', '')
         )
         return user
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    latest_air_quality = serializers.SerializerMethodField()
-
     class Meta:
-        model = User
+        model = CustomUser
+        # --- CORRECTED: Simplified to match the updated model ---
         fields = (
-            'id',
-            'email',
-            'full_name',
-            'location',
-            'latitude',
-            'longitude',
-            'latest_air_quality'
+            'id', 'email', 'full_name', 'location', 'latitude', 
+            'longitude', 'api_key'
         )
-
-    def get_latest_air_quality(self, obj):
-        latest = obj.air_quality_data.first()
-        if latest:
-            return {
-                'aqi': latest.aqi,
-                'pm25': latest.pm25,
-                'pm10': latest.pm10,
-                'timestamp': latest.timestamp
-            }
-        return None
+        read_only_fields = ('api_key',)

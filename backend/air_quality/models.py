@@ -1,61 +1,73 @@
 from django.db import models
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.utils import timezone
-User = get_user_model()
 
-# existing model intact
-class AirQualityData(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='air_quality_data')
-    location = models.CharField(max_length=255)
-    aqi = models.IntegerField()  # Air Quality Index
-    pm25 = models.FloatField()  # PM2.5 concentration
+# --- Keep your existing models like AirQualityReading and SensorFileUpload ---
+
+class AirQualityReading(models.Model):
+    # ... your existing AirQualityReading model definition ...
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    source = models.CharField(max_length=20, choices=[('api', 'API'), ('sensor', 'Sensor'), ('FRIEND_API', 'Friend API')], default='api')
     timestamp = models.DateTimeField(default=timezone.now)
-
-    # additional fields to match sensor data (optional)
-    pm10 = models.FloatField(null=True, blank=True)  # PM10 concentration
-    co = models.FloatField(null=True, blank=True)    # CO concentration
-    no2 = models.FloatField(null=True, blank=True)   # NO2 concentration
-    so2 = models.FloatField(null=True, blank=True)   # SO2 concentration
-    o3 = models.FloatField(null=True, blank=True)    # O3 concentration
+    location_name = models.CharField(max_length=255, null=True, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     
-    class Meta:
-        ordering = ['-timestamp']
+    # Core AQI and pollutant data
+    aqi = models.IntegerField(null=True, blank=True, help_text="Overall Air Quality Index")
+    pm25 = models.FloatField(null=True, blank=True, verbose_name="PM2.5")
+    pm10 = models.FloatField(null=True, blank=True, verbose_name="PM10")
+    co = models.FloatField(null=True, blank=True, verbose_name="CO")
+    no2 = models.FloatField(null=True, blank=True, verbose_name="NO2")
+    so2 = models.FloatField(null=True, blank=True, verbose_name="SO2")
+    o3 = models.FloatField(null=True, blank=True, verbose_name="Ozone (O3)")
+    category = models.CharField(max_length=100, null=True, blank=True)
+    
+    # Store the full, raw response from the source API or sensor
+    raw_data = models.JSONField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.user.email} - {self.location} - {self.aqi} - {self.pm25} - {self.timestamp}"
+        return f"AQI {self.aqi} at {self.location_name} on {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
 
-# New model for sensor-based AQI calculations
-class AirQualityRecord(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sensor_air_quality')
-    aqi = models.FloatField()  # Calculated AQI from sensor data
-    pm25 = models.FloatField()  # PM2.5 concentration from sensor
-    pm10 = models.FloatField(default=0)  # PM10 concentration from sensor
-    temperature = models.FloatField(null=True, blank=True)  # Temperature in °C
-    humidity = models.FloatField(null=True, blank=True)     # Humidity in %
-    pressure = models.FloatField(null=True, blank=True)     # Pressure in hPa
-    category = models.CharField(max_length=50)  # Air quality category/status
-    timestamp = models.DateTimeField(default=timezone.now)
-    
-    # Optional location fields to match existing model
-    location = models.CharField(max_length=255, null=True, blank=True)
-    
-    class Meta:
-        ordering = ['-timestamp']
-        
-    def __str__(self):
-        return f"Sensor AQI: {self.aqi} ({self.category}) at {self.timestamp}"
+class SensorFileUpload(models.Model):
+    # ... your existing SensorFileUpload model definition ...
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    filename = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    data = models.TextField() # Storing file content as text
+    location = models.CharField(max_length=255, blank=True, null=True)
 
-# New model for AQI predictions
-class AQIPrediction(models.Model):
-    air_quality_record = models.ForeignKey(AirQualityRecord, on_delete=models.CASCADE, related_name='predictions')
-    hours_ahead = models.IntegerField(default=24)  # How many hours ahead is this prediction
-    predicted_aqi = models.FloatField()  # Predicted AQI value
-    model_used = models.CharField(max_length=100)  # Which model made this prediction
-    created_at = models.DateTimeField(default=timezone.now)
-    confidence = models.FloatField(null=True, blank=True)  # Optional confidence score
-    
-    class Meta:
-        ordering = ['-created_at']
-        
     def __str__(self):
-        return f"Prediction: {self.predicted_aqi} AQI in {self.hours_ahead}h using {self.model_used}"
+        return f"{self.filename} uploaded by {self.user.email} at {self.timestamp}"
+
+
+# --- ADD THESE NEW MODELS ---
+
+class AQIForecast(models.Model):
+    """
+    Represents a single 7-day forecast generation event.
+    It acts as a parent container for the individual daily data points.
+    """
+    generated_at = models.DateTimeField(auto_now_add=True)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+
+    def __str__(self):
+        return f"Forecast for ({self.latitude}, {self.longitude}) generated at {self.generated_at}"
+
+
+class ForecastDataPoint(models.Model):
+    """
+    Represents a single day's data point within a 7-day forecast.
+    """
+    forecast = models.ForeignKey(AQIForecast, related_name='data_points', on_delete=models.CASCADE)
+    date = models.DateField()
+    predicted_aqi = models.FloatField()
+
+    class Meta:
+        # Ensures that each forecast has only one prediction per date
+        unique_together = ('forecast', 'date')
+        ordering = ['date']
+
+    def __str__(self):
+        return f"{self.date}: Predicted AQI {self.predicted_aqi}"

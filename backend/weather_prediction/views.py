@@ -1,77 +1,58 @@
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import WeatherPrediction
-from .serializers import WeatherPredictionSerializer
-from utils.services import WeatherService, WeatherPredictionModel
-from datetime import datetime
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+# Import just the top-level services
+from utils.services import WeatherService, PredictionService 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def current_weather(request):
-    """Get current weather for user's location or a specified location."""
-    user = request.user
-    location_name = request.query_params.get('location', user.location)
+class WeatherForecastView(APIView):
+    """Provides a real 7-day weather forecast using the Open-Meteo API."""
+    permission_classes = [IsAuthenticated]
 
-    if not location_name:
-        return Response({'error': 'User location not available and no location specified'}, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        lat = user.latitude
+        lon = user.longitude
 
-    lat, lon = WeatherService.geocode_location(location_name)
-    if not lat or not lon:
-        return Response({'error': f'Could not find location: {location_name}'}, status=status.HTTP_400_BAD_REQUEST)
+        if not lat or not lon:
+            return Response(
+                {"error": "User profile must have latitude and longitude set."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        # Note: This now calls the refined weather service method
+        forecast_data = WeatherService.get_7_day_weather_forecast(lat, lon)
+        if forecast_data is None:
+            return Response(
+                {"error": "Could not retrieve weather forecast data at this time."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        return Response({"forecast": forecast_data})
 
-    weather_data = WeatherService.get_weather_data(lat, lon)
-    if not weather_data:
-        return Response({'error': 'Failed to fetch weather data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    return Response({
-        'location': location_name,
-        'weather': weather_data
-    })
+class AQIPredictionView(APIView):
+    """
+    Provides a competitive 7-day AQI forecast by running all available models
+    and highlighting the best result.
+    """
+    permission_classes = [IsAuthenticated]
 
-# --- FIX: Changed to GET and simplified logic ---
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def weather_forecast(request):
-    """AI-powered 7-day weather prediction, now correctly handling GET requests."""
-    user = request.user
-    # Get location from query parameter, fall back to user's default location
-    location_name = request.query_params.get('location', user.location)
-    days_ahead = 7  # The frontend is designed for a 7-day forecast
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        lat = user.latitude
+        lon = user.longitude
 
-    if not location_name:
-        return Response({'error': 'User location not available and no location specified'}, status=status.HTTP_400_BAD_REQUEST)
+        if not lat or not lon:
+            return Response(
+                {"error": "User profile must have latitude and longitude for prediction."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-    # Use the service to geocode the location name
-    lat, lon = WeatherService.geocode_location(location_name)
-    if lat is None or lon is None:
-        return Response({'error': f'Could not find location: {location_name}'}, status=status.HTTP_404_NOT_FOUND)
+        # Call the new top-level method to get the complete analysis
+        prediction_analysis = PredictionService.get_best_aqi_forecast(lat, lon)
 
-    # Get current weather for the specified location to use as a base for prediction
-    current_weather = WeatherService.get_weather_data(lat, lon)
-    if not current_weather:
-        return Response({
-            'error': 'Failed to fetch current weather data for prediction base.'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    # Generate predictions using the model
-    predictions = WeatherPredictionModel.predict_weather(current_weather, days_ahead)
-    
-    # Save predictions to the database (this can be done in the background)
-    for prediction in predictions:
-        WeatherPrediction.objects.create(
-            user=user,
-            location=location_name,
-            prediction_date=prediction['date'],
-            predicted_temperature=prediction['temperature'],
-            predicted_humidity=prediction['humidity'],
-            predicted_pressure=prediction['pressure'],
-            predicted_wind_speed=prediction['wind_speed'],
-            predicted_condition=prediction['condition'],
-            confidence_score=prediction['confidence']
-        )
-    
-    # --- FIX: Return the predictions array directly ---
-    # The frontend expects a JSON array: [ {...}, {...}, ... ]
-    return Response(predictions)
+        if not prediction_analysis or 'error' in prediction_analysis:
+            return Response(
+                prediction_analysis or {"error": "Could not generate AQI prediction."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response(prediction_analysis)

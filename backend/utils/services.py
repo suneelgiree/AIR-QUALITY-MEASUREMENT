@@ -1,381 +1,150 @@
+# --- Standard and Third-Party Imports ---
 import requests
-import os
-import sys
-import json
-import numpy as np
-import joblib
-import serial
-import re
-import time
-from pathlib import Path
-from datetime import datetime, timedelta
+import traceback
 from django.conf import settings
 
-BASE_DIR = Path(settings.BASE_DIR)
-PREDICTION_DIR = BASE_DIR.parent / 'prediction'
-
-if str(PREDICTION_DIR) not in sys.path:
-    sys.path.append(str(PREDICTION_DIR))
-
+# Graceful Import for the AQI Calculator Module from the 'prediction' directory
 try:
+    # This assumes your AQI_Calculator.py is in a directory added to PYTHONPATH
     from AQI_Calculator import AQICalculator
-except ImportError as e:
-    print(f"Error importing AQI_Calculator: {e}")
-
-try:
-    from sensor.models import AQILog
 except ImportError:
-    AQILog = None
+    print("Warning: AQICalculator module not found. A fallback will be used.")
+    AQICalculator = None 
 
-EXPECTED_MODEL_FEATURES = [
-    'temperature_2m (°C)', 'relative_humidity_2m (%)', 'dew_point_2m (°C)', 'apparent_temperature (°C)',
-    'precipitation (mm)', 'rain (mm)', 'snowfall (cm)', 'snow_depth (m)',
-    'weather_code (wmo code)', 'pressure_msl (hPa)', 'surface_pressure (hPa)',
-    'cloud_cover (%)', 'cloud_cover_low (%)', 'cloud_cover_mid (%)', 'cloud_cover_high (%)',
-    'et0_fao_evapotranspiration (mm)', 'vapour_pressure_deficit (kPa)', 'wind_speed_10m (km/h)',
-    'wind_speed_100m (km/h)', 'wind_direction_10m (°)', 'wind_direction_100m (°)',
-    'wind_gusts_10m (km/h)', 'soil_temperature_0_to_7cm (°C)', 'soil_temperature_7_to_28cm (°C)',
-    'soil_temperature_28_to_100cm (°C)', 'soil_temperature_100_to_255cm (°C)',
-    'soil_moisture_0_to_7cm (m³/m³)', 'soil_moisture_7_to_28cm (m³/m³)',
-    'soil_moisture_28_to_100cm (m³/m³)', 'soil_moisture_100_to_255cm (m³/m³)',
-    'prev_us_aqi'
-]
+# =============================================================================
+# --- SERVICE CLASSES ---
+# =============================================================================
 
 class WeatherService:
+    """Handles all interactions with external weather and air quality APIs."""
+    OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+    
     @staticmethod
-    def geocode_location(location):
-        try:
-            api_key = settings.OPENWEATHER_API_KEY
-            url = f"http://api.openweathermap.org/geo/1.0/direct?q={location}&limit=1&appid={api_key}"
-            response = requests.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                if data:
-                    return data[0]['lat'], data[0]['lon']
-        except Exception as e:
-            print(f"Error geocoding location: {e}")
-        return None, None
-
-    @staticmethod
-    def get_air_quality_data(lat, lon):
+    def get_air_quality_data(lat: float, lon: float) -> dict | None:
         """
-        Fetches live air quality data from OpenWeatherMap,
-        then calculates the US/EPA AQI from PM2.5/PM10 using AQICalculatorService.
-        Returns both the calculated AQI and raw pollutant values.
+        Fetches the current air quality measurements from an external provider (e.g., OpenWeatherMap).
+        This is used when a user manually requests a new reading.
         """
         try:
+            # Assumes OPENWEATHER_API_KEY is in your settings.py
             api_key = settings.OPENWEATHER_API_KEY
             url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={api_key}"
             response = requests.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                # Get PM2.5, PM10, and other pollutant values
-                pm25 = data['list'][0]['components']['pm2_5']
-                pm10 = data['list'][0]['components']['pm10']
-                co = data['list'][0]['components']['co']
-                no2 = data['list'][0]['components']['no2']
-                so2 = data['list'][0]['components']['so2']
-                o3 = data['list'][0]['components']['o3']
-                # Calculate AQI using your AQICalculator
-                # Provide only necessary values for AQI calculation
-                calculated_aqi_data = AQICalculatorService.calculate_aqi_from_data({
-                    'pm25': pm25,
-                    'pm10': pm10,
-                })
-                # Use calculated_aqi_data['aqi'] for US/EPA AQI value
-                return {
-                    'aqi': calculated_aqi_data['aqi'],
-                    'pm25': pm25,
-                    'pm10': pm10,
-                    'co': co,
-                    'no2': no2,
-                    'so2': so2,
-                    'o3': o3,
-                    'category': calculated_aqi_data.get('category', 'Unknown'),
-                    'color': calculated_aqi_data.get('color', ''),
-                    'aqi_pm25': calculated_aqi_data.get('aqi_pm25', 0),
-                    'aqi_pm10': calculated_aqi_data.get('aqi_pm10', 0),
-                }
-        except Exception as e:
-            print(f"Error fetching air quality data: {e}")
-        return None
-
-    @staticmethod
-    def get_weather_data(lat, lon):
-        try:
-            api_key = settings.OPENWEATHER_API_KEY
-            url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric"
-            response = requests.get(url)
-            if response.status_code == 200:
-                return response.json()
-        except Exception as e:
-            print(f"Error fetching weather data: {e}")
-        return None
-
-    @staticmethod
-    def get_additional_weather_features(lat, lon):
-        return {
-            'dew_point_2m (°C)': 0,
-            'apparent_temperature (°C)': 0,
-            'precipitation (mm)': 0,
-            'rain (mm)': 0,
-            'snowfall (cm)': 0,
-            'snow_depth (m)': 0,
-            'weather_code (wmo code)': 0,
-            'surface_pressure (hPa)': 0,
-            'cloud_cover (%)': 0,
-            'cloud_cover_low (%)': 0,
-            'cloud_cover_mid (%)': 0,
-            'cloud_cover_high (%)': 0,
-            'et0_fao_evapotranspiration (mm)': 0,
-            'vapour_pressure_deficit (kPa)': 0,
-            'wind_speed_100m (km/h)': 0,
-            'wind_direction_100m (°)': 0,
-            'soil_temperature_0_to_7cm (°C)': 0,
-            'soil_temperature_7_to_28cm (°C)': 0,
-            'soil_temperature_28_to_100cm (°C)': 0,
-            'soil_temperature_100_to_255cm (°C)': 0,
-            'soil_moisture_0_to_7cm (m³/m³)': 0,
-            'soil_moisture_7_to_28cm (m³/m³)': 0,
-            'soil_moisture_28_to_100cm (m³/m³)': 0,
-            'soil_moisture_100_to_255cm (m³/m³)': 0,
-        }
-
-class WeatherPredictionModel:
-    @staticmethod
-    def predict_weather(current_weather, days_ahead):
-        predictions = []
-        current_temp = current_weather['main']['temp']
-        current_humidity = current_weather['main']['humidity']
-        current_pressure = current_weather['main']['pressure']
-        current_wind_speed = current_weather['wind']['speed']
-        for day in range(1, days_ahead + 1):
-            temp_change = np.random.normal(0, 2) * day * 0.5
-            humidity_change = np.random.normal(0, 5) * day * 0.3
-            pressure_change = np.random.normal(0, 10) * day * 0.2
-            predicted_temp = current_temp + temp_change
-            predicted_humidity = max(0, min(100, current_humidity + humidity_change))
-            predicted_pressure = current_pressure + pressure_change
-            predicted_wind = max(0, current_wind_speed + np.random.normal(0, 2))
-            if predicted_temp < 0:
-                condition = "Snow"
-            elif predicted_humidity > 80 and predicted_temp > 10:
-                condition = "Rain"
-            elif predicted_humidity < 30:
-                condition = "Clear"
-            else:
-                condition = "Cloudy"
-            prediction_date = datetime.now() + timedelta(days=day)
-            predictions.append({
-                'date': prediction_date.date(),
-                'temperature': round(predicted_temp, 1),
-                'humidity': round(predicted_humidity, 1),
-                'pressure': round(predicted_pressure, 1),
-                'wind_speed': round(predicted_wind, 1),
-                'condition': condition,
-                'confidence': max(0.6, 0.9 - (day * 0.1))
+            response.raise_for_status()
+            data = response.json()['list'][0]
+            
+            components = data.get('components', {})
+            aqi_data = AQICalculatorService.calculate_aqi_from_data({
+                'pm25': components.get('pm2_5', 0),
+                'pm10': components.get('pm10', 0),
             })
-        return predictions
+            
+            # Return a structured dictionary that can be used to create an AirQualityReading
+            return {
+                'aqi': aqi_data.get('aqi'),
+                'category': aqi_data.get('category'),
+                'pm25': components.get('pm2_5'),
+                'pm10': components.get('pm10'),
+                'co': components.get('co'),
+                'no2': components.get('no2'),
+                'so2': components.get('so2'),
+                'o3': components.get('o3'),
+                'raw_data': data # Store the original response for reference
+            }
+        except (requests.RequestException, KeyError, IndexError) as e:
+            print(f"Error fetching live air quality data: {e}")
+            return None
+
+    @staticmethod
+    def get_7_day_weather_forecast(lat: float, lon: float) -> list | None:
+        """
+        Fetches a 7-day weather forecast from Open-Meteo.
+        This is used exclusively by the prediction engine.
+        """
+        params = {
+            "latitude": lat, "longitude": lon,
+            "daily": ["weather_code", "temperature_2m_max", "temperature_2m_min", "apparent_temperature_max", "precipitation_sum", "rain_sum", "snowfall_sum", "wind_speed_10m_max", "wind_gusts_10m_max", "et0_fao_evapotranspiration", "vapour_pressure_deficit_max"],
+            "timezone": "auto", "forecast_days": 7,
+        }
+        try:
+            response = requests.get(WeatherService.OPEN_METEO_URL, params=params)
+            response.raise_for_status()
+            data = response.json().get('daily', {})
+            
+            forecasts, time_data = [], data.get('time', [])
+            for i in range(len(time_data)):
+                # Map API fields to the feature names expected by the ML models
+                forecasts.append({
+                    'date': data['time'][i],
+                    'temperature_2m (°C)': (data['temperature_2m_max'][i] + data['temperature_2m_min'][i]) / 2,
+                    'apparent_temperature (°C)': data['apparent_temperature_max'][i],
+                    'precipitation (mm)': data['precipitation_sum'][i],
+                    'rain (mm)': data['rain_sum'][i],
+                    'snowfall (cm)': data['snowfall_sum'][i],
+                    'wind_speed_10m (km/h)': data['wind_speed_10m_max'][i],
+                    'wind_gusts_10m (km/h)': data['wind_gusts_10m_max'][i],
+                    'et0_fao_evapotranspiration (mm)': data['et0_fao_evapotranspiration'][i],
+                    'vapour_pressure_deficit (kPa)': data['vapour_pressure_deficit_max'][i],
+                    'weather_code (wmo code)': data['weather_code'][i],
+                })
+            return forecasts
+        except (requests.RequestException, KeyError) as e:
+            print(f"Error fetching 7-day weather forecast: {e}")
+            return None
 
 class AQICalculatorService:
+    """Calculates the US AQI standard from pollutant concentrations."""
     _calculator = None
-
+    
     @classmethod
     def get_calculator(cls):
+        """Initializes the AQI calculator, with a fallback if the custom module is not found."""
         if cls._calculator is None:
-            try:
+            if AQICalculator:
                 cls._calculator = AQICalculator()
-            except NameError:
-                print("AQICalculator class not available, creating minimal implementation")
+            else: # Provides a minimal, built-in calculator if the external one fails
                 from dataclasses import dataclass
                 @dataclass
                 class MinimalAQICalculator:
+                    pm25_breakpoints = [(0.0, 12.0, 0, 50), (12.1, 35.4, 51, 100), (35.5, 55.4, 101, 150), (55.5, 150.4, 151, 200), (150.5, 250.4, 201, 300), (250.5, 500.4, 301, 500)]
+                    pm10_breakpoints = [(0, 54, 0, 50), (55, 154, 51, 100), (155, 254, 101, 150), (255, 354, 151, 200), (355, 504, 201, 500)]
+                    aqi_categories = {(0, 50): "Good", (51, 100): "Moderate", (101, 150): "Unhealthy for Sensitive Groups", (151, 200): "Unhealthy", (201, 300): "Very Unhealthy", (301, 500): "Hazardous"}
+                    
+                    def _calc_linear(self, c, bp_lo, bp_hi, aqi_lo, aqi_hi): return round(((aqi_hi - aqi_lo) / (bp_hi - bp_lo)) * (c - bp_lo) + aqi_lo)
+                    
+                    def calculate_aqi_for_pollutant(self, c, breakpoints):
+                        for bp_lo, bp_hi, aqi_lo, aqi_hi in breakpoints:
+                            if bp_lo <= c <= bp_hi: return self._calc_linear(c, bp_lo, bp_hi, aqi_lo, aqi_hi)
+                        return 500
+                    
                     def calculate_aqi(self, pm25=None, pm10=None):
-                        # Use the US/EPA breakpoints or a simplified conversion
-                        # This is just an example. Ideally, use proper breakpoints.
-                        if pm25 is not None:
-                            pm25_aqi = min(500, int(pm25 * 4))  # Simplified: 25ug/m3 ~ 100 AQI
-                        else:
-                            pm25_aqi = 0
-                        if pm10 is not None:
-                            pm10_aqi = min(500, int(pm10 * 2))
-                        else:
-                            pm10_aqi = 0
-                        overall_aqi = max(pm25_aqi, pm10_aqi)
-                        return {
-                            'timestamp': datetime.now().isoformat(),
-                            'overall_aqi': overall_aqi,
-                            'dominant_pollutant': 'PM2.5' if pm25_aqi >= pm10_aqi else 'PM10',
-                            'dominant_concentration': pm25 if pm25_aqi >= pm10_aqi else pm10,
-                            'individual_aqis': {'PM2.5': pm25_aqi, 'PM10': pm10_aqi},
-                            'concentrations': {'PM2.5': pm25, 'PM10': pm10}
-                        }
-                    def get_aqi_category(self, aqi_value):
-                        if aqi_value <= 50:
-                            return {'category': 'Good', 'color': 'Green'}
-                        elif aqi_value <= 100:
-                            return {'category': 'Moderate', 'color': 'Yellow'}
-                        elif aqi_value <= 150:
-                            return {'category': 'Unhealthy for Sensitive Groups', 'color': 'Orange'}
-                        elif aqi_value <= 200:
-                            return {'category': 'Unhealthy', 'color': 'Red'}
-                        elif aqi_value <= 300:
-                            return {'category': 'Very Unhealthy', 'color': 'Purple'}
-                        else:
-                            return {'category': 'Hazardous', 'color': 'Maroon'}
+                        aqis = {}
+                        if pm25 is not None: aqis['PM2.5'] = self.calculate_aqi_for_pollutant(pm25, self.pm25_breakpoints)
+                        if pm10 is not None: aqis['PM10'] = self.calculate_aqi_for_pollutant(pm10, self.pm10_breakpoints)
+                        if not aqis: return {'overall_aqi': 0, 'dominant_pollutant': 'N/A'}
+                        dom = max(aqis, key=aqis.get)
+                        return {'overall_aqi': aqis[dom], 'dominant_pollutant': dom}
+                    
+                    def get_aqi_category(self, aqi):
+                        for (low, high), cat in self.aqi_categories.items():
+                            if low <= aqi <= high: return cat
+                        return 'Hazardous'
                 cls._calculator = MinimalAQICalculator()
         return cls._calculator
 
-    @staticmethod
-    def read_sensor_data():
-        # Simulation removed: only return empty data
-        return {
-            'pm25': None,
-            'pm10': None,
-            'temperature': None,
-            'humidity': None,
-            'pressure': None,
-            'timestamp': datetime.now().isoformat()
-        }
-
-    @staticmethod
-    def read_real_sensor_data(serial_port='/dev/ttyUSB0', baudrate=9600, timeout=2):
-        try:
-            ser = serial.Serial(serial_port, baudrate, timeout=timeout)
-            time.sleep(2)
-            line = ser.readline().decode(errors='ignore').strip()
-            ser.close()
-            match = re.findall(r"PM1\.0:\s*(\d+)\s*µg/m3\s*\|\s*PM2\.5:\s*(\d+)\s*µg/m3\s*\|\s*PM10:\s*(\d+)\s*µg/m3", line)
-            if match:
-                pm1, pm25, pm10 = map(float, match[0])
-                return {
-                    'pm25': pm25,
-                    'pm10': pm10,
-                    'pm1_0': pm1,
-                    'timestamp': datetime.now().isoformat()
-                }
-        except Exception as e:
-            print(f"Error reading sensor: {e}")
-        return None
-
     @classmethod
-    def calculate_aqi_from_data(cls, sensor_data):
+    def calculate_aqi_from_data(cls, sensor_data: dict) -> dict:
+        """Calculates AQI and category from a dictionary of sensor readings."""
         try:
             calculator = cls.get_calculator()
             pm25 = float(sensor_data.get('pm25', 0) or 0)
             pm10 = float(sensor_data.get('pm10', 0) or 0)
             aqi_result = calculator.calculate_aqi(pm25=pm25, pm10=pm10)
-            category_info = calculator.get_aqi_category(aqi_result['overall_aqi'])
+            overall_aqi = aqi_result.get('overall_aqi')
             return {
-                'aqi': aqi_result['overall_aqi'],
-                'aqi_pm25': aqi_result['individual_aqis'].get('PM2.5', 0),
-                'aqi_pm10': aqi_result['individual_aqis'].get('PM10', 0),
-                'pm25': pm25,
-                'pm10': pm10,
-                'category': category_info['category'],
-                'color': category_info['color'],
-                'description': category_info.get('description', ''),
-                'temperature': sensor_data.get('temperature'),
-                'humidity': sensor_data.get('humidity'),
-                'pressure': sensor_data.get('pressure'),
-                'timestamp': sensor_data.get('timestamp')
+                'aqi': overall_aqi,
+                'category': calculator.get_aqi_category(overall_aqi),
             }
         except Exception as e:
-            import traceback
-            print(f"Error calculating AQI: {str(e)}")
-            print(traceback.format_exc())
-            raise
-
-class PredictionService:
-    @staticmethod
-    def get_available_models():
-        models = []
-        for file in PREDICTION_DIR.glob('*.pkl'):
-            if file.name.endswith('_model.pkl'):
-                models.append(file.name)
-        return models
-
-    @staticmethod
-    def fetch_full_feature_set(lat, lon, previous_aqi=0):
-        features = {name: 0 for name in EXPECTED_MODEL_FEATURES}
-        prev_aqi_value = previous_aqi
-        if AQILog is not None:
-            try:
-                latest_aqilog = AQILog.objects.order_by('-timestamp').first()
-                if latest_aqilog and getattr(latest_aqilog, 'overall_aqi', None) is not None:
-                    prev_aqi_value = latest_aqilog.overall_aqi
-            except Exception as e:
-                print(f"Error accessing AQILog: {e}")
-
-        features['prev_us_aqi'] = prev_aqi_value
-
-        weather = WeatherService.get_weather_data(lat, lon)
-        if weather:
-            main = weather.get('main', {})
-            wind = weather.get('wind', {})
-            clouds = weather.get('clouds', {})
-            rain = weather.get('rain', {})
-            snow = weather.get('snow', {})
-            weather_code = weather.get('weather', [{}])[0].get('id', 0)
-            features['temperature_2m (°C)'] = main.get('temp', 0)
-            features['relative_humidity_2m (%)'] = main.get('humidity', 0)
-            features['pressure_msl (hPa)'] = main.get('pressure', 0)
-            features['wind_speed_10m (km/h)'] = wind.get('speed', 0)
-            features['wind_direction_10m (°)'] = wind.get('deg', 0)
-            features['wind_gusts_10m (km/h)'] = wind.get('gust', 0)
-            features['cloud_cover (%)'] = clouds.get('all', 0)
-            features['rain (mm)'] = rain.get('1h', 0)
-            features['snowfall (cm)'] = snow.get('1h', 0)
-            features['weather_code (wmo code)'] = weather_code
-        additional = WeatherService.get_additional_weather_features(lat, lon)
-        for k, v in additional.items():
-            features[k] = v
-
-        print("SVR Prediction Feature Vector:", features)
-        return features
-
-    @staticmethod
-    def predict_aqi_from_features(features, model_name='svr_model.pkl', hours_ahead=24):
-        try:
-            model_path = PREDICTION_DIR / model_name
-            if not model_path.exists():
-                print(f"Model file not found: {model_path}")
-                return {'error': f"Model not found: {model_name}"}
-            model = joblib.load(model_path)
-            trained_feature_names = EXPECTED_MODEL_FEATURES
-            X = np.array([features.get(name, 0) for name in trained_feature_names]).reshape(1, -1)
-            prediction = model.predict(X)[0]
-            return {
-                f'predicted_aqi_{hours_ahead}h': float(prediction),
-                'model_used': model_name,
-                'hours_ahead': hours_ahead
-            }
-        except Exception as e:
-            import traceback
-            print(f"Error predicting with {model_name}: {str(e)}")
-            print(traceback.format_exc())
-            return {'error': str(e)}
-
-    @staticmethod
-    def predict_aqi_7_days(lat, lon, previous_aqi=0, model_name='svr_model.pkl'):
-        predictions = []
-        prev_aqi = previous_aqi
-        if AQILog is not None:
-            try:
-                latest_aqilog = AQILog.objects.order_by('-timestamp').first()
-                if latest_aqilog and getattr(latest_aqilog, 'overall_aqi', None) is not None:
-                    prev_aqi = latest_aqilog.overall_aqi
-            except Exception as e:
-                print(f"Error accessing AQILog for 7-day prediction: {e}")
-
-        for hours_ahead in [24, 48, 72, 96, 120, 144, 168]:
-            features = PredictionService.fetch_full_feature_set(lat, lon, previous_aqi=prev_aqi)
-            prediction = PredictionService.predict_aqi_from_features(features, model_name=model_name, hours_ahead=hours_ahead)
-            predicted_aqi_val = prediction.get(f'predicted_aqi_{hours_ahead}h', None)
-            predictions.append({
-                "hours_ahead": hours_ahead,
-                "predicted_aqi": predicted_aqi_val,
-                "model_used": prediction.get("model_used", model_name),
-                "confidence": prediction.get("confidence", None)
-            })
-        return predictions
+            print(f"Error calculating AQI: {e}\n{traceback.format_exc()}")
+            return {}

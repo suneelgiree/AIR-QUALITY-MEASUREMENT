@@ -72,11 +72,11 @@
       "passwordMismatch": "Passwords do not match",
       "locationRequired": "Location is required"
     },
+    "apiErrorValidation": "Please correct the errors below and try again.",
     "apiErrorGeneric": "Registration failed. Please try again later.",
     "apiErrorNetwork": "Network error. Please check your connection.",
     "apiErrorUnexpected": "An unexpected error occurred. Please try again."
   },
-  
   "login": {
     "signIn": "Sign In",
     "email": "Email Address",
@@ -94,19 +94,18 @@
       "invalidCredentials": "Invalid email or password",
       "networkError": "Network error. Please check your connection.",
       "unexpectedError": "An unexpected error occurred. Please try again."
-    },
-  "profile": {
-      "title": "Profile",
-      "name": "Full Name",
-      "email": "Email",
-      "location": "Location",
-      "coordinates": "Coordinates",
-      "edit": "Edit",
-      "save": "Save",
-      "cancel": "Cancel",
-      "fetchError": "Failed to fetch profile. Please try again.",
-      "updateError": "Failed to update profile."
     }
+  },
+  "profile": {
+    "title": "Profile",
+    "name": "Full Name",
+    "email": "Email",
+    "location": "Location",
+    "coordinates": "Coordinates",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "fetchError": "Failed to fetch profile. Please try again.",
+    "updateError": "Failed to update profile."
   }
-
 }
